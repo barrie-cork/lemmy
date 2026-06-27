@@ -7,6 +7,15 @@ swaps:
   - term: moderation case
     plain: "dealing with a problem"
     note: "keep 'moderation' as the searchable category word; use plain in body"
+  - term: report
+    plain: "flagging that a post/comment breaks a RULE (with reasons + evidence)"
+    note: "NOT 'something I find offensive' — rules decide cases, not feelings; theme 13"
+  - term: rule-making / rule proposal
+    plain: "members propose a rule, the community agrees it by consent (bottom-up)"
+    note: "felt-harm-but-no-rule -> propose a rule, don't report a feeling; theme 14"
+  - term: reputation decay
+    plain: "standing fades over time unless kept up — and the community can tune how fast"
+    note: "slower decay = more welcoming/engagement; theme 15"
   - term: sanction
     plain: "consequence / what happens next"
   - term: graduated sanction

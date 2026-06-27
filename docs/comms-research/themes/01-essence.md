@@ -40,14 +40,17 @@ the section headers of the pamphlet.
 
 ### 1. You make your own rules — and the stakes
 The group writes its own rules and can change them — *and* agrees how much
-breaking them costs. Nobody hands them down from above; you all consent to the
-deal. *(Customisable rule sets, community-set stakes, consent. The "self-organise"
-promise. See [`10`](10-reputation-is-earned-by-helping.md) §community-set stakes.)*
+breaking them costs. **Bottom-up:** members *propose* rules and the community
+*consents*; nobody hands them down from above. *(Customisable rule sets,
+bottom-up rule-making, community-set stakes, consent. The "self-organise"
+promise. See [`14`](14-bottom-up.md) + [`10`](10-reputation-is-earned-by-helping.md) §community-set stakes.)*
 
 ### 2. You decide together, in the open
-Serious decisions are made by ordinary members drawn like a jury — not by
-admins — and every decision is written down with its reasons, where everyone can
-see. *(Juries, consensus thresholds, public case log, transparency.)*
+A reported post is checked against **the rule it's said to break** — not against
+whether someone's offended — by ordinary members drawn like a jury, not by
+admins; and every decision is written down with its reasons, where everyone can
+see. *(Juries, rules-not-feelings, consensus thresholds, public case log,
+transparency. See [`13`](13-the-moderation-journey.md).)*
 
 ### 3. You repair, you don't just punish
 When something goes wrong the response starts gentle and aims to fix the harm

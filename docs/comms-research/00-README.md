@@ -19,6 +19,22 @@ something a grassroots organiser can grasp in 60 seconds and want to adopt.
 | **Analogies** | The spine of the explanation (email-for-communities, references-for-a-job, jury-duty). |
 | **Open question to resolve** | **What *is* this thing?** App? System? Protocol? Tool? A "way of organising"? See [`themes/02-what-is-it.md`](themes/02-what-is-it.md). |
 
+## The candidate spine: bottom-up, not top-down
+
+The strongest single organising idea to emerge (founder, 2026-06-27). It unifies
+almost every theme below, so it's a leading candidate for the pamphlet's spine:
+
+> **Most platforms are top-down — rules, moderation, reputation and power all flow
+> *down* from whoever owns the site. Brehon Consensus is bottom-up — rules grow
+> *up* from your community's own practice and consent, moderation is shared
+> *across* everyone, and standing is earned *by helping*. Bottom-up at every
+> layer.**
+
+This is also historically grounded: Brehon law itself was bottom-up — norms →
+customs → good practice → *then* codified. Rules proved themselves in lived
+practice before they were written down. See
+[`themes/14-bottom-up.md`](themes/14-bottom-up.md).
+
 ## The two ideas that reframe everything
 
 1. **Anti-TINA.** Neoliberalism's slogan is *"There Is No Alternative"* (TINA) —
@@ -89,7 +105,10 @@ comms-research/
 │   ├── 09-anti-cancel-culture.md← restorative = accountability without exile
 │   ├── 10-reputation-is-earned-by-helping.md ← standing from jury service, not clout
 │   ├── 11-invitation-as-defence.md ← surety stops bots/provocateurs/astroturf
-│   └── 12-everybody-moderates.md← shared moderation; load shrinks as it grows
+│   ├── 12-everybody-moderates.md← shared moderation; load shrinks as it grows
+│   ├── 13-the-moderation-journey.md ← report→jury→reputation→role, step by step
+│   ├── 14-bottom-up.md          ← rules grow from practice+consent, not top-down
+│   └── 15-yours-to-tune.md      ← customisability as a core promise (the knobs)
 ├── research-prompts/
 │   └── perplexity-deep-research.md ← the prompt to run for evidence-based comms
 ├── source-notes/

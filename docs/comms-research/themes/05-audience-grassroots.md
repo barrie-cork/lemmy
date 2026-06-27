@@ -15,6 +15,26 @@ They are **not** technical. They may not follow "democracy theory." But they are
 *sophisticated about power and fairness* — they've watched groups implode and
 they know why it hurts.
 
+### The friendliest on-ramp: small, low-stakes community groups (founder, 2026-06-27)
+
+The *primary early adopter* is likely friendlier and more everyday than
+"activists fighting power." Founder's example: the **Cork City Gardens
+community** — a local gardening group. For groups like that:
+
+- **The stakes are low** — and that's a *feature*, not a limitation. Low stakes =
+  freedom to **experiment** with running your own online community, safely.
+- It's **a great opportunity for an existing real-world group to give its members
+  a self-governed online home** — an allotment, a residents' association, a hobby
+  club, a parents' group, a choir.
+- The pitch to them isn't "fight the system" — it's **"a calm, fair, drama-light
+  place to run your group, that you control and can tinker with."**
+
+This ties to the *Dawn of Everything* experimentation thread
+([`03-anti-tina.md`](03-anti-tina.md)) and [`15-yours-to-tune.md`](15-yours-to-tune.md):
+small low-stakes communities trying their own rule-sets **is the alternative in
+action.** Lead-adopter copy should feel **welcoming and low-barrier**, not
+militant.
+
 ## What keeps them up at night (their problems, their words)
 
 - "Why is it always the same few people making all the decisions?"

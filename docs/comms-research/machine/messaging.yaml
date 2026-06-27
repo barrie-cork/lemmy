@@ -16,8 +16,9 @@ framing:
   pillars: [make, decide, repair]            # You make rules / decide together / repair not punish
   umbrella_noun: governance                  # abstract level only; never the greeting
   greeting_verb: "govern yourselves"         # lead with the verb, not a category noun
-  narrative_spine: "There are lots of alternatives"   # anti-TINA
-  brehon_role: "evidence alternatives exist, not heritage romance"
+  narrative_spine: "There are lots of alternatives"   # anti-TINA (themes/03)
+  candidate_master_spine: "Bottom-up, not top-down — at every layer"  # themes/14; unifies most themes
+  brehon_role: "evidence alternatives exist, not heritage romance; bottom-up rule-making (norms->customs->good-practice->codified)"
   category_by_depth:                          # which noun for which reader (themes/02)
     organiser: "a fair way for your group to govern itself"
     curious_press: "an open governance layer for online communities"
@@ -64,10 +65,41 @@ hooks:
     hard_line: "posting/liking/sharing are IRRELEVANT to standing — engagement is not reputation; severs attention->power link"
     not: [social-credit-score, influencer-clout, popularity-contest, single-number-leaderboard]
     caution: "always frame as 'earn by helping', never 'gain points'/'level up'; never show a number; today=jury participation"
-    two_directional: "standing also DROPS when a post is reported and found to break the community's consent rules"
+    two_directional: "standing also DROPS when a post is reported and found to break the community's consent rules; sustained low standing shrinks your role (less likely called for jury; below a floor, not called / can't vote on some things)"
     community_sets_stakes: "how much a violation costs is set BY THE COMMUNITY when they write their rules and all consent to them — not by the software, not by us, not by a hidden algorithm"
     stakes_one_liner: "Break the rules your community agreed, and your standing reflects it — by exactly the amount your community decided, together, in advance."
     stakes_honesty: "verify which severity dials are community-settable in live v0 vs design before public specifics (repo 01-vision 5.2 + sanction ladder)"
+  invitation_as_defence:               # themes/11
+    line: "Bots can't get a reference. Provocateurs can't hide who let them in."
+    mechanism: "inviter stakes own reputation on you -> entry costly + traceable; bad behaviour ripples up the vouching chain"
+    defends_against: [bots-ai-spam, agents-provocateurs-paid-agitators, brigades-pile-ons, sock-puppets-sybils, drive-by-rule-breakers]
+    why_now: "these are the defining daily pains of mainstream social media in 2026; people are exhausted and want out — the exhaustion IS the demand; meet it with relief not a lecture"
+    inclusivity_valve: "time-based entry exists too; welcoming to people, hostile to floods; community sets its own openness"
+    honesty: "claim 'much costlier + traceable', NOT 'impossible'"
+  everybody_moderates:                 # themes/12
+    line: "No one is the moderator, because everyone is — a little. The more of you, the less each does."
+    mechanism: "cases shared across membership via RANDOM jury draw + a REST period after serving (fair by design)"
+    scaling: "counter-intuitive: more members = LIGHTER per-person load (opposite of normal platforms)"
+    answers: "the #1 organiser pain — referee burnout + single-point-of-failure clique"
+    honesty: "'minimal IF enough people' — small pools mean more frequent turns; shared effort, not zero effort; verify draw+cooldown live v0"
+  bottom_up:                           # themes/14 — candidate SPINE
+    line: "Bottom-up, not top-down — at every layer."
+    means: "rules grow from members' practice + consent (not handed down); moderation shared across all; reputation earned by helping; power flows UP from the membership"
+    brehon_backbone: "Brehon law was bottom-up: norms -> customs -> good practice -> codified. Rules proved themselves in practice BEFORE being written."
+    rule_making_loop: "felt need -> propose a rule -> members consent (by whatever method suits them) -> enforceable. NOT feeling -> report -> punish."
+    experimentation: "no mandated consensus method; trying what works IS the point (Dawn of Everything)"
+
+# The moderation flow, structured (themes/13). RULES decide cases, NOT feelings.
+moderation_flow:
+  correction: "judged by the RULES, not by whether one person finds it offensive; if no rule covers it, propose a rule (bottom-up), don't report a feeling"
+  steps:
+    - "member posts/comments on the host platform (e.g. a Lemmy server)"
+    - "any member REPORTS it as breaking rule X (with reasons + evidence: quotes, context, links)"
+    - "a jury is drawn to compare the content to the RULE cited, weighing evidence"
+    - "jury decides by the community's thresholds"
+    - "found-against-rule -> reported person's standing DOWN; reporter MAY gain a little (customisable, upheld-reports-only, off-by-default-able — reward follows a correct rule-based report, never a vendetta)"
+    - "sustained low standing -> smaller role (less likely called; below a floor not called / can't vote on some things)"
+  honesty: "verify report->case threshold, jury draw, reporter-reward, min-standing gate: live v0 vs design"
 
 # Anchor analogies (themes/04). leak = what it gets wrong, must be named.
 analogies:
@@ -96,6 +128,26 @@ analogies:
   - id: neighbours-warning
     tier: 2
     carries: [federation-advisory, local-sovereignty]
+
+# Customisable knobs (themes/15). VERIFY which are live v0 vs design before public.
+customisation:
+  line: "It's yours to tune — it bends to your community, not the other way round."
+  knobs:
+    - {knob: rules, controls: "what's allowed / what breaks them", status: principle-documented}
+    - {knob: stakes, controls: "how much a violation costs standing", status: verify}
+    - {knob: reputation-decay-rate, controls: "how fast standing fades; dial DOWN to encourage engagement", status: verify}
+    - {knob: reporter-reward, controls: "small standing gain for an UPHELD report; off-by-default-able (controversial)", status: verify}
+    - {knob: jury-thresholds, controls: "agreement needed for a decision", status: verify}
+    - {knob: jury-cooldown-rest, controls: "rest period after serving (fairness of the draw)", status: verify}
+    - {knob: min-standing-to-be-called-or-vote, controls: "floor below which role shrinks", status: verify}
+    - {knob: entry-openness, controls: "vouching vs time-based balance (inclusivity valve)", status: verify}
+  honesty: "frame unconfirmed knobs as 'designed to be tunable', not 'is tunable'; repo confirms principle (sponsor-liability floor config-driven; values 'tuneable' w/ per-community override)"
+
+# Lead-adopter / on-ramp (themes/05)
+on_ramp:
+  primary_early_adopter: "small, low-stakes, everyday community groups (e.g. Cork City Gardens) — existing real-world groups giving members a self-governed online home"
+  framing: "low stakes = freedom to EXPERIMENT safely; welcoming + low-barrier, NOT militant; 'a calm, fair, drama-light place to run your group, that you control and can tinker with'"
+  examples: [garden-club, allotment, residents-association, hobby-club, parents-group, choir]
 
 # Words we use deliberately (themes/07, 08)
 word_choices:

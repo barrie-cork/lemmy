@@ -6,9 +6,9 @@ findings you can act on — not vibes. After it runs, save the output back into
 this folder as `perplexity-results-<date>.md` and reconcile it against the theme
 files.
 
-> Tip: if the run is too long, split it — run Sections A–C2 first (the
-> communication science + reputation/restorative/consent framing), then D–G
-> (positioning + history verification + naming + synthesis) as a second prompt
+> Tip: if the run is too long, split it — run Sections A–C3 first (the
+> communication science + reputation/restorative/consent/defence framing), then
+> D–G (positioning + history verification + naming + synthesis) as a second prompt
 > that references the first.
 
 ---
@@ -27,10 +27,23 @@ to communicate it well):
   handles two jobs: MEMBERSHIP (who belongs, how trust is built through vouching)
   and MEDIATION/MODERATION (handling rule-breaking by fair peer juries aimed at
   REPAIR, not punishment).
-- Communities write their OWN rules (fully customisable, self-organising).
-  Serious decisions are made by randomly-selected member juries, logged publicly
+- Communities write their OWN rules (fully customisable, self-organising). Rules
+  are BOTTOM-UP: members propose them and the community adopts them by consent —
+  cases are judged against the RULES, never against whether one person "finds it
+  offensive". If a behaviour feels harmful but no rule covers it, the path is to
+  PROPOSE A RULE, not to report a feeling.
+- Moderation is DISTRIBUTED — there is no moderator class. When a post/comment is
+  reported (as breaking a rule, with evidence), a panel of members is RANDOMLY
+  drawn to judge it (with a rest period after serving, so it rotates fairly).
+  Responsibility and workload are shared across everyone, so the bigger the
+  community the lighter each person's share. Serious decisions are logged publicly
   with reasons. Sanctions are graduated and restorative; reintegration over
-  permanent bans.
+  permanent bans. Sustained low standing shrinks a member's role (less likely to
+  be called for jury; below a floor, not called / can't vote on some things).
+- It is HIGHLY CUSTOMISABLE: communities tune the rules, the stakes, the
+  reputation DECAY RATE (e.g. slow it down to encourage engagement), whether a
+  successful reporter gains a little standing (controversial; off-by-default), and
+  jury thresholds/cooldowns. The product is a neutral, configurable layer.
 - It is federated (many independent communities that cooperate but don't rule
   each other) and designed to plug into multiple open protocols (Lemmy/ActivityPub,
   Matrix, PeerTube, MeshCore) — like an open standard for self-governance.
@@ -48,9 +61,23 @@ to communicate it well):
   graduated responses (a note, then reduced reach, then a pause; permanent
   exclusion is the last resort), decided by a fair peer panel (not a mob), with a
   guaranteed appeal and a route back. "Accountability without annihilation."
-- Primary audience: NON-TECHNICAL grassroots organisers (mutual aid, co-ops,
-  activist groups, unions, community groups). Tone must be plain, warm, sober —
-  NOT startup hype, NOT a manifesto, NOT Celtic-heritage romance.
+- MEMBERSHIP is invitation/vouching-based as a DEFENCE: your inviter stakes their
+  own reputation on you, so it is costly and traceable to flood or infiltrate the
+  community. This defends against bots/AI spam, agents provocateurs (paid
+  agitators who join to divide), brigades, and sock-puppets. There is also a
+  time-based entry path so it isn't pure gatekeeping.
+- The PROPOSED MASTER FRAME is "bottom-up, not top-down — at every layer": rules,
+  moderation, reputation and power all flow UP from the membership rather than DOWN
+  from a platform owner. This mirrors how Brehon law itself developed (norms ->
+  customs -> good practice -> codified law).
+- Primary audience: NON-TECHNICAL grassroots organisers — AND, as the friendliest
+  early adopter, small low-stakes everyday community groups (e.g. a local gardening
+  group giving its members a self-governed online home). For these, low stakes =
+  freedom to experiment safely. Tone must be plain, warm, sober — NOT startup hype,
+  NOT a manifesto, NOT Celtic-heritage romance.
+- WHY NOW: bots, spam, astroturfing, paid provocateurs and pile-ons are the
+  defining daily experience of mainstream social media; people are exhausted and
+  want an alternative. The exhaustion is the demand.
 
 Produce a structured, heavily-cited research brief covering ALL sections below.
 For every claim, cite sources (academic where possible; reputable practitioner
@@ -118,6 +145,34 @@ SECTION C2 — Cancel culture, accountability, and restorative framing
   your community" increases perceived fairness and reduces grievance vs.
   externally-imposed or opaque rules. Self-governance / commons-governance
   literature (Elinor Ostrom's design principles are a likely anchor).
+
+SECTION C3 — Bad-actor defence, distributed moderation, and bottom-up rules
+- BOT/ASTROTURF/INFILTRATION DEFENCE: How do practitioners and researchers explain
+  invitation/vouching/"web of trust" systems to non-technical people as a defence
+  against bots, spam, sock-puppets/sybils, astroturfing and coordinated
+  inauthentic behaviour? Any evidence that social-vouching (sponsor stakes their
+  own reputation) measurably raises the cost of infiltration? How to message this
+  WITHOUT it reading as elitist gatekeeping (we have a time-based entry valve too).
+- The threat is current and felt: summarise the best evidence on the SCALE of
+  bots / inauthentic behaviour / astroturfing on mainstream platforms and on
+  public EXHAUSTION / distrust with it — so we can credibly say "people are sick
+  of this and want an alternative" with citations, not assertion.
+- DISTRIBUTED / SHARED MODERATION: evidence on community / volunteer / juror-based
+  moderation models vs. centralised moderator teams — burnout, sustainability,
+  legitimacy, scaling. (Reddit volunteer mods, Wikipedia, Digg/Slashdot
+  meta-moderation, eBay/StackOverflow reputation, citizens' juries / sortition.)
+  Does sharing the load across a random rotating pool actually reduce burnout and
+  increase perceived fairness? What works, what fails?
+- BOTTOM-UP RULE-MAKING / EMERGENT NORMS: evidence on rules that emerge from
+  community practice and consent vs. top-down imposed rules — compliance,
+  legitimacy, durability. (Customary law, common law, Ostrom's commons, Lessig's
+  "norms" — and online: community-authored rules/wikis.) Support (or complicate)
+  our "bottom-up, not top-down" master frame with real findings.
+- ADOPTION via LOW-STAKES EXPERIMENTATION: evidence on how new civic/social tools
+  get adopted by small, low-stakes real-world groups first (hobby clubs, gardens,
+  residents' associations) — and whether "a safe place to experiment" is an
+  effective adoption frame. What lowers the barrier for a non-technical group to
+  TRY self-governance?
 
 SECTION D — Positioning analysis: how comparable projects explain themselves
 For EACH of the following, summarise: their one-line pitch, the category NOUN
@@ -200,6 +255,11 @@ the Section G synthesis.
    - Section C2 (cancel culture, restorative, procedural justice, consent) →
      harden [`../themes/09-anti-cancel-culture.md`](../themes/09-anti-cancel-culture.md)
      and the community-set-stakes section of theme 10.
+   - Section C3 (defence, distributed moderation, bottom-up rules, low-stakes
+     adoption) → harden themes [`11`](../themes/11-invitation-as-defence.md),
+     [`12`](../themes/12-everybody-moderates.md), [`13`](../themes/13-the-moderation-journey.md),
+     [`14`](../themes/14-bottom-up.md), and the on-ramp section of
+     [`05`](../themes/05-audience-grassroots.md).
 3. *Then* write the pamphlet from the reconciled foundation.
 
 ## Smaller follow-up prompts (optional, run as needed)

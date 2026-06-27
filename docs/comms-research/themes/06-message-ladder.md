@@ -36,19 +36,25 @@ Alt, warmer:
 can actually use.*
 
 1. **The problem you know too well.**
-   (3–4 lines naming the lonely, unfair mess of group admin — their words, from
-   [`05-audience-grassroots.md`](05-audience-grassroots.md).)
+   (3–4 lines naming the lonely, unfair mess of group admin — bots and spam,
+   pile-ons, burnout, the same few people running everything. Their words, from
+   [`05-audience-grassroots.md`](05-audience-grassroots.md). People are sick of it
+   and want out — meet that with relief, not a lecture.)
 
-2. **It doesn't have to be this way.**
-   (Anti-TINA, light touch: humans have run fair, member-led communities for
-   thousands of years — Brehon law is one proven example among many. Not
-   nostalgia; recovered practice. From [`03-anti-tina.md`](03-anti-tina.md).)
+2. **It doesn't have to be this way — most platforms are just top-down.**
+   (Anti-TINA + the bottom-up spine: rules, moderation and power all flow *down*
+   from whoever owns the site. But humans have run fair, member-led communities
+   for thousands of years, *bottom-up* — Brehon law is one proven example, where
+   rules grew from practice and consent. Not nostalgia; recovered practice. From
+   [`03-anti-tina.md`](03-anti-tina.md) + [`14-bottom-up.md`](14-bottom-up.md).)
 
 3. **The three promises** — *Make · Decide · Repair*:
-   - **You make your own rules — and the stakes.** Your community writes its own
-     rules *and* agrees how much breaking them costs. Nobody outside decides; you
-     all consent to the deal. (self-organisation, customisable, consent)
-   - **You decide together, in the open.** (juries, transparency, consensus)
+   - **You make your own rules — and the stakes.** Bottom-up: members *propose*
+     rules and the community *consents*; you also agree how much breaking them
+     costs. Nobody outside decides. (self-organisation, bottom-up, consent)
+   - **You decide together, in the open.** A reported post is checked against the
+     **rule** (not a feeling) by a drawn panel of members. (juries, transparency,
+     rules-not-feelings)
    - **You repair, you don't just punish.** The opposite of a pile-on:
      accountability without annihilation, with an appeal and a way back.
      (restorative, inclusive, reintegration; anti-cancel-culture)
@@ -58,18 +64,32 @@ can actually use.*
    on a panel), never by posting, liking, or being popular. It can't be gamed.
    (theme 10 — strong, surprising, very "us")
 
-5. **How it feels in practice** — three analogy vignettes:
+5. **No one burns out, because everyone moderates a little.**
+   No moderator class. The work is shared like jury duty — randomly drawn, with a
+   rest after — so the bigger the community, the *lighter* each person's share.
+   ([`12-everybody-moderates.md`](12-everybody-moderates.md))
+
+6. **And bad actors can't flood in.**
+   You're vouched in by a member who stakes their own standing — so bots, spam,
+   and paid agitators can't just sign up by the thousand. (Welcoming to people,
+   hostile to floods. [`11-invitation-as-defence.md`](11-invitation-as-defence.md))
+
+7. **How it feels in practice** — analogy vignettes:
    - Joining = *a reference / being signed in* (and a fallback if no one vouches yet).
-   - A problem = *a panel of peers, like jury duty — but to put it right, not punish*.
+   - A problem = *report it against a rule → a panel of peers checks it, like jury
+     duty — to put it right, not punish*. ([`13`](13-the-moderation-journey.md))
    - Staying connected = *communities warn each other, but no one's the boss*.
 
-6. **And it travels.** (email analogy: an open standard, works across the tools
+8. **And it travels.** (email analogy: an open standard, works across the tools
    you already use — Lemmy today, more to come. "Designed to.")
 
-7. **It's yours.** Open source, no company owns it, no tokens, no surveillance
-   scores. You're in control.
+9. **It's yours — and yours to tune.** Open source, no company owns it, no tokens,
+   no surveillance scores. And you can tune how it runs (even how fast standing
+   fades, if you want to keep it welcoming). ([`15-yours-to-tune.md`](15-yours-to-tune.md))
 
-8. **Where it's at + how to follow / try.** (honest alpha status; one link.)
+10. **Where it's at + how to follow / try.** (honest alpha status; one link.
+    Low-stakes groups — a garden club, a residents' group — are the perfect place
+    to experiment.)
 
 ## Rung 4 — the FAQ objections (for site, pre-empt the bounce)
 
@@ -86,6 +106,22 @@ can actually use.*
   `09-anti-cancel-culture.md`.)
 - *"Isn't vouching just gatekeeping?"* → There's a time-based way in too. And
   vouching is what makes it resistant to fake accounts and brigading.
+- *"Won't bots / trolls / paid agitators just take over?"* → Much harder here.
+  You get in by being vouched for by a member who stakes their own standing — so
+  bots, spam armies, sock-puppets and infiltrators can't sign up at scale, and
+  anyone who does get in is traceable to who let them in. (See
+  `11-invitation-as-defence.md`.)
+- *"Who actually does the moderating? Won't it burn me out?"* → No one person —
+  everyone, a little. Cases are shared across the membership like jury duty
+  (randomly drawn, with a rest after), so the load is light and gets lighter as
+  the group grows. (See `12-everybody-moderates.md`.)
+- *"So who decides what the rules are?"* → You do — bottom-up. Members propose
+  rules and the community agrees them by consent; you can only be sanctioned
+  against rules the group itself adopted. If something bothers you but no rule
+  covers it, you propose a rule — you don't report a feeling. (See `14-bottom-up.md`.)
+- *"Is it one-size-fits-all?"* → No. It's yours to tune — the rules, the stakes,
+  even how fast standing fades. A relaxed garden club and a high-trust activist
+  cell can run it very differently. (See `15-yours-to-tune.md`.)
 - *"Do I have to leave Lemmy / Matrix / my current tool?"* → No — it's built to
   work *with* open tools, not replace them.
 - *"Is this just for activists / lefties?"* → It's for any group that wants to be

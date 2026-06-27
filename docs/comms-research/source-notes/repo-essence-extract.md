@@ -26,12 +26,14 @@ content; Brehon Consensus governs how the group governs itself.
 | Sponsorship / surety | You get in because real members vouch for you — like a reference for a job or a club. Your sponsors stake a bit of their own standing on you. |
 | Reputation (4 dimensions, event-sourced) | Standing you earn slowly through your actions. Not a single score or leaderboard — it just unlocks what you're trusted to do. **Earned by *helping* (today: jury service — volunteering to weigh cases by the community's rules), NOT by posting/liking/sharing. Engagement ≠ standing.** See themes/10. |
 | Capabilities (not scores) | The system shows "trusted reporter" or "can sit on a jury", not a number. Abilities, earned. |
-| Jury (5 members, drawn from the pool) | When something serious happens, ordinary members — not bosses — are picked to decide it. Like jury duty. |
+| Report | Anyone can flag a post/comment that **breaks a rule** (not "that I find offensive" — rules decide cases, not feelings), giving reasons + evidence. See themes/13. |
+| Jury (5 members, drawn from the pool) | When something serious happens, ordinary members — not bosses — are **randomly** picked to decide it (with a rest period after, so it rotates fairly). They compare the content to the **rule cited**. Like jury duty. See themes/12, 13. |
+| Rule-making (bottom-up) | Rules aren't handed down — members **propose** them and the community **consents**, the way Brehon law grew (norms→customs→good practice→codified). Felt a behaviour is harmful? Propose a rule, don't just report a feeling. See themes/14. |
 | Graduated / restorative sanctions | Consequences escalate gently: a note, then reduced reach, then a pause — repair before exclusion. Bans are the last resort, not the reflex. This is not Cancel Culture! |
 | Public case log (redacted) | Every serious decision is written down in the open: which rule, what was decided, why. No secret moderation. |
 | Appeals | One guaranteed appeal, heard by a new, bigger jury. Get it wrong and the original jurors lose standing. |
 | Federation (advisory signals) | Communities can warn each other, but no community can be forced to obey another. Local rule stays local. |
-| Customisable rules | **The group writes its own rules.** The app is fully customisable — every community decides what belongs and what doesn't, for itself. |
+| Customisable rules | **The group writes its own rules.** The app is fully customisable — every community decides what belongs and what doesn't, for itself. Tunable knobs incl. **reputation decay rate** (dial down to encourage engagement), stakes, reporter-reward, jury cooldown. See themes/15. (⚠ verify which knobs are live v0.) |
 
 ## The five qualities the founder names
 

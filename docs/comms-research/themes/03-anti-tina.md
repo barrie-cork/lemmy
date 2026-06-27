@@ -45,6 +45,12 @@ verifiable example — likely candidates: Aboriginal Australian native title,
 *Mabo*; Māori tikanga in NZ courts; First Nations cases in Canada. **Do not
 assert the Brehon-specific court claim until verified.**)
 
+**And it was bottom-up.** Brehon law didn't descend from a ruler — it grew from
+norms → customs → good practice → codified law. That bottom-up origin is itself
+the proof that rules *can* come from the community rather than from above, and
+it's the historical backbone of the product's whole design. See
+[`14-bottom-up.md`](14-bottom-up.md).
+
 ## Why this matters for the product
 
 Brehon Consensus is **the alternative made usable**. It takes one of these older,
