@@ -26,9 +26,11 @@ something a grassroots organiser can grasp in 60 seconds and want to adopt.
    anything. Brehon Consensus is a living counter-argument: **There Is An
    Alternative.** Brehon law is one of *many* historical proofs (Graeber &
    Wengrow, *The Dawn of Everything*) that humans have organised
-   non-hierarchically, by consent and explicit rules, again and again. It was
-   even cited successfully in a modern court case by Indigenous people. The
-   product is the alternative made usable.
+   non-hierarchically, by consent and explicit rules, again and again.
+   (Customary/tribal law has even been invoked in modern courts — ⚠ specific
+   case **must be verified** before public use; see
+   [`themes/03-anti-tina.md`](themes/03-anti-tina.md).) The product is the
+   alternative made usable.
 
 2. **Protocol-agnostic governance.** Brehon Consensus is **not** "a Lemmy fork"
    in the marketing. Lemmy is just the *first* host. The real thing is a
@@ -37,6 +39,23 @@ something a grassroots organiser can grasp in 60 seconds and want to adopt.
    (YouTube-style), MeshCore (mesh networking), and more. It complements those
    protocols the way a constitution complements a town: they move the messages;
    it decides, fairly and transparently, who belongs and what's allowed.
+
+## The sharp hooks (the lines that make organisers lean in)
+
+Beyond the two big reframes, these specific distinctions are the
+highest-conversion messages — each answers a pain organisers know intimately:
+
+- **Not cancel culture — "accountability without annihilation."** Repair before
+  exile, decided by a fair panel not a mob, with a guaranteed appeal and a way
+  back. ([`themes/09-anti-cancel-culture.md`](themes/09-anti-cancel-culture.md))
+- **Standing is earned by *helping*, not by clout.** Posting, liking and sharing
+  are irrelevant to your standing — engagement is not reputation. Today you earn
+  it concretely by serving as a juror. It severs the attention→power link that
+  corrupts ordinary platforms.
+  ([`themes/10-reputation-is-earned-by-helping.md`](themes/10-reputation-is-earned-by-helping.md))
+- **The community sets its own stakes, by consent.** How much a violation costs is
+  decided by the community when they write their rules and all agree to live by
+  them — not by us, not by a hidden algorithm. (theme 10)
 
 ## Folder map (OKF-style: human-readable + machine-readable side by side)
 

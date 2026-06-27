@@ -22,6 +22,11 @@ they know why it hurts.
   fight — or losing them entirely."
 - "People say the moderation is unfair / a clique / a power trip."
 - "We had a split and half the group left."
+- "Someone got piled on and driven out over one mistake — and it felt awful, but
+  no one knew how to stop it." *(the cancel-culture pain → theme 09)*
+- "A real harm happened and we had no fair way to deal with it, so it festered."
+- "The loudest / most online people end up with all the influence." *(clout pain
+  → theme 10)*
 - "New people show up, cause chaos, disappear — how do we know who to trust?"
 - "I'm burned out being the unpaid referee."
 - "If I step back, it all falls apart, because everything's in my head."
@@ -35,7 +40,12 @@ they know why it hurts.
 - This is **fair** — and *visibly* fair, so no one can call it a stitch-up.
 - This **shares power** so it's not all on me / not a clique.
 - This is **kind** — it doesn't just kick people out; it tries to fix things.
-- This is **ours** — *we* set the rules, no outside company decides for us.
+  *(restorative, anti-pile-on → theme 09)*
+- This is **ours** — *we* set the rules **and the stakes**, and we all agree to
+  them; no outside company or hidden algorithm decides for us. *(consent /
+  community-set-stakes → theme 10)*
+- This **can't be gamed for clout** — standing comes from helping, not from being
+  loud or popular. *(theme 10)*
 - This is **practical** — I can actually use it, not a 200-page theory.
 
 ## What they're allergic to (instant bounce)

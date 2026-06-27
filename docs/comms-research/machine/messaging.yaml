@@ -38,9 +38,9 @@ ladder:
 # The three pillars, expanded (themes/01)
 pillars:
   - id: make
-    line: "You make your own rules."
-    means: "The group writes its own rules and can change them. Self-organising."
-    mechanic: customisable-rule-sets
+    line: "You make your own rules — and the stakes."
+    means: "The group writes its own rules AND agrees how much breaking them costs; everyone consents to the deal. Nobody outside decides. Self-organising."
+    mechanic: [customisable-rule-sets, community-set-stakes, consent]
   - id: decide
     line: "You decide together, in the open."
     means: "Serious decisions by ordinary members, picked like a jury; every one logged with reasons."

@@ -45,22 +45,31 @@ can actually use.*
    nostalgia; recovered practice. From [`03-anti-tina.md`](03-anti-tina.md).)
 
 3. **The three promises** — *Make · Decide · Repair*:
-   - **You make your own rules.** (self-organisation, customisable)
+   - **You make your own rules — and the stakes.** Your community writes its own
+     rules *and* agrees how much breaking them costs. Nobody outside decides; you
+     all consent to the deal. (self-organisation, customisable, consent)
    - **You decide together, in the open.** (juries, transparency, consensus)
-   - **You repair, you don't just punish.** (restorative, inclusive, reintegration)
+   - **You repair, you don't just punish.** The opposite of a pile-on:
+     accountability without annihilation, with an appeal and a way back.
+     (restorative, inclusive, reintegration; anti-cancel-culture)
 
-4. **How it feels in practice** — three analogy vignettes:
+4. **And standing is earned by helping — not by clout.**
+   You build trust by helping the community govern itself (today: serving fairly
+   on a panel), never by posting, liking, or being popular. It can't be gamed.
+   (theme 10 — strong, surprising, very "us")
+
+5. **How it feels in practice** — three analogy vignettes:
    - Joining = *a reference / being signed in* (and a fallback if no one vouches yet).
    - A problem = *a panel of peers, like jury duty — but to put it right, not punish*.
    - Staying connected = *communities warn each other, but no one's the boss*.
 
-5. **And it travels.** (email analogy: an open standard, works across the tools
+6. **And it travels.** (email analogy: an open standard, works across the tools
    you already use — Lemmy today, more to come. "Designed to.")
 
-6. **It's yours.** Open source, no company owns it, no tokens, no surveillance
+7. **It's yours.** Open source, no company owns it, no tokens, no surveillance
    scores. You're in control.
 
-7. **Where it's at + how to follow / try.** (honest alpha status; one link.)
+8. **Where it's at + how to follow / try.** (honest alpha status; one link.)
 
 ## Rung 4 — the FAQ objections (for site, pre-empt the bounce)
 

@@ -6,9 +6,10 @@ findings you can act on — not vibes. After it runs, save the output back into
 this folder as `perplexity-results-<date>.md` and reconcile it against the theme
 files.
 
-> Tip: if the run is too long, split it — run Sections A–C first (the
-> communication science), then D–F (positioning + verification) as a second
-> prompt that references the first.
+> Tip: if the run is too long, split it — run Sections A–C2 first (the
+> communication science + reputation/restorative/consent framing), then D–G
+> (positioning + history verification + naming + synthesis) as a second prompt
+> that references the first.
 
 ---
 
@@ -36,8 +37,20 @@ to communicate it well):
 - It is inspired by early Irish Brehon law as ONE example among many historical,
   non-hierarchical, consent-based, rule-based societies. It is NOT crypto, NOT
   blockchain-governance, NOT a token system, NOT a surveillance reputation score.
+- REPUTATION/STANDING is earned by HELPING the community govern itself — today,
+  concretely, by serving as a juror (volunteering time to weigh cases by the
+  community's own rules). Posting, liking and sharing are IRRELEVANT to standing —
+  engagement is explicitly NOT reputation. Standing also moves DOWN if your posts
+  are reported and found to break the rules. Crucially, HOW MUCH a violation costs
+  is set BY THE COMMUNITY when they write their own rules and all consent to live
+  by them — not by the software, not by a hidden algorithm.
+- The restorative model is positioned as the OPPOSITE of "cancel culture":
+  graduated responses (a note, then reduced reach, then a pause; permanent
+  exclusion is the last resort), decided by a fair peer panel (not a mob), with a
+  guaranteed appeal and a route back. "Accountability without annihilation."
 - Primary audience: NON-TECHNICAL grassroots organisers (mutual aid, co-ops,
-  activist groups, unions, community groups).
+  activist groups, unions, community groups). Tone must be plain, warm, sober —
+  NOT startup hype, NOT a manifesto, NOT Celtic-heritage romance.
 
 Produce a structured, heavily-cited research brief covering ALL sections below.
 For every claim, cite sources (academic where possible; reputable practitioner
@@ -76,9 +89,35 @@ SECTION C — Trust, credibility, and avoiding backfire
   anti-corporate / activist audiences.
 - How to talk about "reputation" and "trust scores" WITHOUT evoking
   surveillance / social-credit dystopia. Any research or case studies on
-  reputation-system framing that landed well vs. badly.
+  reputation-system framing that landed well vs. badly. SPECIFICALLY: evidence on
+  framing reputation as CONTRIBUTION-EARNED and PRO-SOCIAL ("you earn standing by
+  helping others") vs. compliance/surveillance framing — does the positive
+  "earned by helping" frame measurably defuse the social-credit misread? Any
+  research distinguishing contribution-based standing from engagement/popularity
+  metrics (likes, karma, follower counts) in the public mind?
 - How adjacent projects mishandled crypto/blockchain associations and lost
   audiences — and how to pre-empt that.
+
+SECTION C2 — Cancel culture, accountability, and restorative framing
+- This project positions itself as the OPPOSITE of "cancel culture" — restorative,
+  graduated, with appeals and a route back. "Cancel culture" is a politically
+  charged, contested term. What does the evidence/discourse analysis say about
+  using it in messaging WITHOUT triggering a culture-war reaction or alienating
+  either side? Is it better to name it directly or evoke the experience without
+  the label?
+- Evidence on how RESTORATIVE JUSTICE is communicated to general (non-specialist)
+  audiences — what framings land, what gets misread as "soft on harm" or as
+  "letting people off." How do restorative-justice practitioners explain
+  "accountability without punishment" persuasively?
+- Research on procedural justice / procedural legitimacy: does evidence show that
+  people accept outcomes (even bad ones) more when the PROCESS is seen as fair and
+  they consented to the rules in advance? (Tom Tyler's procedural-justice work and
+  similar.) This underpins our "the community sets and consents to its own stakes"
+  claim — find the supporting evidence.
+- The CONSENT angle: evidence on whether "rules you agreed to in advance, with
+  your community" increases perceived fairness and reduces grievance vs.
+  externally-imposed or opaque rules. Self-governance / commons-governance
+  literature (Elinor Ostrom's design principles are a likely anchor).
 
 SECTION D — Positioning analysis: how comparable projects explain themselves
 For EACH of the following, summarise: their one-line pitch, the category NOUN
@@ -136,7 +175,10 @@ SECTION G — Synthesis & deliverables
   when writing this pamphlet, each with its supporting source.
 - Propose 3 distinct positioning angles (with a sample one-liner each) and rank
   them by fit for non-technical grassroots organisers, with reasoning.
-- List the 5 biggest messaging RISKS and the evidence-based mitigation for each.
+- List the biggest messaging RISKS and the evidence-based mitigation for each.
+  Make sure to cover at least: (a) the "reputation = surveillance/social-credit"
+  misread, (b) the "cancel culture" culture-war trap, (c) the crypto/blockchain
+  misassociation, (d) over-claiming at alpha stage, (e) Celtic-heritage romance.
 - Provide a short annotated reading list (books, papers, toolkits) for deeper
   follow-up.
 
@@ -154,6 +196,10 @@ the Section G synthesis.
    - Section F → settle the noun in [`../themes/02-what-is-it.md`](../themes/02-what-is-it.md)
      and [`../themes/08-the-word-for-what-it-does.md`](../themes/08-the-word-for-what-it-does.md).
    - Section A/B → confirm the analogy-spine choice in [`../themes/04-analogies.md`](../themes/04-analogies.md).
+   - Section C (reputation) → harden [`../themes/10-reputation-is-earned-by-helping.md`](../themes/10-reputation-is-earned-by-helping.md).
+   - Section C2 (cancel culture, restorative, procedural justice, consent) →
+     harden [`../themes/09-anti-cancel-culture.md`](../themes/09-anti-cancel-culture.md)
+     and the community-set-stakes section of theme 10.
 3. *Then* write the pamphlet from the reconciled foundation.
 
 ## Smaller follow-up prompts (optional, run as needed)
@@ -164,3 +210,5 @@ the Section G synthesis.
   comparison table.
 - **Just the naming question:** run Section F alone when you're ready to lock the
   category noun.
+- **Just the charged-terms check:** run Section C2 alone to de-risk the
+  "cancel culture" and "reputation" framings before they go public.

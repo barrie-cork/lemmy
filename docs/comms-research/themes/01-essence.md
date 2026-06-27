@@ -38,9 +38,11 @@ category framing, never as the greeting word. See
 Everything the product does ladders up to exactly three promises. Use these as
 the section headers of the pamphlet.
 
-### 1. You make your own rules
-The group writes its own rules and can change them. Nobody hands them down from
-above. *(Customisable rule sets. The "self-organise" promise.)*
+### 1. You make your own rules — and the stakes
+The group writes its own rules and can change them — *and* agrees how much
+breaking them costs. Nobody hands them down from above; you all consent to the
+deal. *(Customisable rule sets, community-set stakes, consent. The "self-organise"
+promise. See [`10`](10-reputation-is-earned-by-helping.md) §community-set stakes.)*
 
 ### 2. You decide together, in the open
 Serious decisions are made by ordinary members drawn like a jury — not by
