@@ -14,6 +14,13 @@ online and off.
 
 ## The reframe: TALOA — "There Are Lots Of Alternatives"
 
+> **Spine note (founder, 2026-06-27):** anti-TINA is the *narrative* half of the
+> pamphlet's spine. Its sharper form — *"someone else has to be in charge" isn't
+> a law of nature, it's a choice that was sold to us* — and its mechanism half,
+> *bottom-up at every layer*, are unified in
+> [`14-bottom-up.md`](14-bottom-up.md) ("the WHY and the HOW"). This file supplies
+> the evidence that alternatives are real; theme-14 carries the spine itself.
+
 The counter-argument, and our spine:
 
 > **There are lots of alternatives. Always have been.**

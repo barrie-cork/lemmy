@@ -16,9 +16,12 @@ framing:
   pillars: [make, decide, repair]            # You make rules / decide together / repair not punish
   umbrella_noun: governance                  # abstract level only; never the greeting
   greeting_verb: "govern yourselves"         # lead with the verb, not a category noun
-  narrative_spine: "There are lots of alternatives"   # anti-TINA (themes/03)
-  candidate_master_spine: "Bottom-up, not top-down — at every layer"  # themes/14; unifies most themes
+  master_spine: "Bottom-up, not top-down — at every layer"  # themes/14; THE spine (founder decision 2026-06-27)
+  spine_why: "You don't need a tech company to run your community fairly. You never did."  # SP-1 reframe: it's a choice not a natural law; plain public line, not 'ideology'
+  spine_how: "Bottom-up at every layer — rules/moderation/standing/power all flow UP from the membership"  # the mechanism that proves the WHY
+  narrative_spine: "There are lots of alternatives"   # anti-TINA (themes/03) — the narrative/evidence half, feeds the spine
   brehon_role: "evidence alternatives exist, not heritage romance; bottom-up rule-making (norms->customs->good-practice->codified)"
+  ideology_framing_tone: "OPEN founder call — plain/empowering line is public lead; 'manufactured common sense / ideological imposition' is deep-copy only. Revisit at about-page draft."
   category_by_depth:                          # which noun for which reader (themes/02)
     organiser: "a fair way for your group to govern itself"
     curious_press: "an open governance layer for online communities"

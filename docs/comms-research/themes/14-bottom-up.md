@@ -53,10 +53,43 @@ This ties straight to *The Dawn of Everything* (see
 communities trying different rule-sets and decision methods *is* the alternative
 in action — not a bug to be standardised away.
 
-## The "bottom-up at every layer" through-line
+## The spine: bottom-up is the HOW, "it's a choice not a law" is the WHY
 
-This is the candidate spine for the whole pamphlet — it unifies almost every
-theme:
+**This is THE spine of the pamphlet** (founder decision, 2026-06-27). Two beats,
+one argument:
+
+- **WHY (the reframe):** You don't need a tech company or a technical expert to
+  run your community fairly. *You never did.* The idea that group decisions
+  require a platform corporation or a moderator class isn't a law of nature —
+  it's a choice that was sold to us as common sense. Communities have governed
+  themselves for centuries.
+- **HOW (the mechanism):** Bottom-up, at every layer. Rules grow up from the
+  membership's own practice and consent; moderation is shared; standing is earned
+  by helping; power flows *up*, not down.
+
+The WHY denaturalises the assumption ("someone else has to be in charge"); the
+HOW shows the working alternative that proves it. Lead with the WHY in plain,
+empowering language; let the bottom-up HOW carry the evidence.
+
+> **Research backing (so this rests on citations, not assertion):** the WHY is the
+> documented Lakoff/framing mechanism — reframing manufactured "common sense" is
+> exactly how narrative change works (research Section B) — and Ostrom's Nobel
+> work (Section C2) is direct proof that communities *can* self-govern a commons,
+> overturning the "tragedy of the commons" that was itself the ideological
+> default. See [`03-anti-tina.md`](03-anti-tina.md) and
+> [`16-evidence-synthesis.md`](16-evidence-synthesis.md) (to come).
+
+**Tone caution (founder-flagged, `founder-standout-points.md` SP-1):** keep the
+*idea* — it's a choice, not gravity; you're more capable than you've been told —
+but the public lead is the plain line, **not** the word "ideology." "Manufactured
+common sense" / "ideological imposition" is deep-copy register, not the greeting.
+The crisp public line: **"You don't need a tech company to run your community
+fairly. You never did."** *(How hard to lean on the explicit-ideology framing in
+deeper copy is still an open founder call — revisit when drafting the about-page.)*
+
+### The "bottom-up at every layer" through-line (the HOW, in full)
+
+It unifies almost every theme:
 
 | Layer | Top-down (mainstream platforms) | Bottom-up (Brehon Consensus) |
 |---|---|---|
