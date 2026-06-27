@@ -50,7 +50,10 @@ comms-research/
 │   ├── 04-analogies.md          ← the sticky comparisons, ranked + tested
 │   ├── 05-audience-grassroots.md← who we're talking to, their words, their fears
 │   ├── 06-message-ladder.md     ← 7-word → 1-line → 1-para → 1-page versions
-│   └── 07-traps-and-tone.md     ← what to avoid (jargon, romance, utopia-creep)
+│   ├── 07-traps-and-tone.md     ← what to avoid (jargon, romance, utopia-creep)
+│   ├── 08-the-word-for-what-it-does.md ← moderation/mediation/governance choice
+│   ├── 09-anti-cancel-culture.md← restorative = accountability without exile
+│   └── 10-reputation-is-earned-by-helping.md ← standing from jury service, not clout
 ├── research-prompts/
 │   └── perplexity-deep-research.md ← the prompt to run for evidence-based comms
 ├── source-notes/

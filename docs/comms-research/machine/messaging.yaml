@@ -49,6 +49,21 @@ pillars:
     line: "You repair, you don't just punish."
     means: "Responses start gentle and aim to fix harm and bring people back. Banishment is last resort."
     mechanic: [graduated-restorative-sanctions, reintegration, appeals]
+    hook: "the opposite of cancel culture — accountability without annihilation"
+
+# Sharp positioning hooks (themes/09, 10) — high-conversion, handle with care
+hooks:
+  anti_cancel_culture:                 # themes/09
+    line: "This is not cancel culture. Accountability without annihilation — repair before exile, and a way back."
+    contrast: "graduated note->reduced-reach->pause->exclusion(last); fair panel not a mob; guaranteed appeal; reintegration"
+    caution: "charged term — lead with the lived experience, not the slogan; pro-process, not a culture-war side"
+  reputation_by_helping:               # themes/10
+    line: "Likes don't buy you standing here. Helping does."
+    means_today: "standing earned by JURY SERVICE — volunteering to weigh cases by the community's own rules (the live v0 mechanic)"
+    means_design: "four ways of helping: judging fairly (live), reporting fairly, showing up, vouching well"
+    hard_line: "posting/liking/sharing are IRRELEVANT to standing — engagement is not reputation; severs attention->power link"
+    not: [social-credit-score, influencer-clout, popularity-contest, single-number-leaderboard]
+    caution: "always frame as 'earn by helping', never 'gain points'/'level up'; never show a number; today=jury participation"
 
 # Anchor analogies (themes/04). leak = what it gets wrong, must be named.
 analogies:

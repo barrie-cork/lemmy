@@ -49,8 +49,24 @@ see. *(Juries, consensus thresholds, public case log, transparency.)*
 
 ### 3. You repair, you don't just punish
 When something goes wrong the response starts gentle and aims to fix the harm
-and bring people back. Banishment is the last resort, never the first.
-*(Graduated restorative sanctions, reintegration, no permanent outcasts.)*
+and bring people back. Banishment is the last resort, never the first. **This is
+the opposite of cancel culture** — accountability without annihilation, and a way
+back. *(Graduated restorative sanctions, reintegration, no permanent outcasts.
+See [`09-anti-cancel-culture.md`](09-anti-cancel-culture.md).)*
+
+## Standing is earned by *helping* (not avoiding punishment)
+
+A point worth pulling forward (founder, 2026-06-27): the trust you build comes
+from **contributing to the community** — vouching well, reporting accurately,
+serving fairly on juries, showing up consistently. It is **pro-social by
+design**: you rise by being *useful to others*, not by gaming a score or
+avoiding penalties. This is the cleanest distance from any "social-credit" read —
+it rewards helping, it doesn't surveil compliance.
+
+And a hard line: **posting, liking, and sharing are irrelevant to standing.**
+Engagement is not reputation — you can't farm trust with content or popularity.
+That severs the attention→power link that corrupts ordinary platforms. See
+[`10-reputation-is-earned-by-helping.md`](10-reputation-is-earned-by-helping.md).
 
 > Make · Decide · Repair — three words, in order. A reader who remembers only
 > these three has the whole thing.

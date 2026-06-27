@@ -24,10 +24,10 @@ content; Brehon Consensus governs how the group governs itself.
 | What the docs call it | What it actually means to a person |
 |---|---|
 | Sponsorship / surety | You get in because real members vouch for you — like a reference for a job or a club. Your sponsors stake a bit of their own standing on you. |
-| Reputation (4 dimensions, event-sourced) | Standing you earn slowly through your actions. Not a single score or leaderboard — it just unlocks what you're trusted to do. |
+| Reputation (4 dimensions, event-sourced) | Standing you earn slowly through your actions. Not a single score or leaderboard — it just unlocks what you're trusted to do. **Earned by *helping* (today: jury service — volunteering to weigh cases by the community's rules), NOT by posting/liking/sharing. Engagement ≠ standing.** See themes/10. |
 | Capabilities (not scores) | The system shows "trusted reporter" or "can sit on a jury", not a number. Abilities, earned. |
 | Jury (5 members, drawn from the pool) | When something serious happens, ordinary members — not bosses — are picked to decide it. Like jury duty. |
-| Graduated / restorative sanctions | Consequences escalate gently: a note, then reduced reach, then a pause — repair before exclusion. Bans are the last resort, not the reflex. |
+| Graduated / restorative sanctions | Consequences escalate gently: a note, then reduced reach, then a pause — repair before exclusion. Bans are the last resort, not the reflex. This is not Cancel Culture! |
 | Public case log (redacted) | Every serious decision is written down in the open: which rule, what was decided, why. No secret moderation. |
 | Appeals | One guaranteed appeal, heard by a new, bigger jury. Get it wrong and the original jurors lose standing. |
 | Federation (advisory signals) | Communities can warn each other, but no community can be forced to obey another. Local rule stays local. |

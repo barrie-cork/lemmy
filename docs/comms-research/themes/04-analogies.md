@@ -63,9 +63,13 @@ trade-off and the failure mode of each.
 > "Standing builds the way trust does with a new colleague — slowly, through what
 > you do. It's not a number on a leaderboard; it just quietly unlocks what
 > you're trusted to help with."
-- Carries: reputation-as-capability, no single score, earned-slowly.
+- Carries: reputation-as-capability, no single score, earned-slowly, **earned by
+  helping not by activity** (posting/liking/sharing don't count).
 - **Failure mode:** must actively *distance* from "social credit score" (China)
-  and "credit rating" — both carry dystopian baggage. Say what it's **not**.
+  and "credit rating" — both carry dystopian baggage. The positive fix beats the
+  disclaimer: "you earn it by *helping* — today, by serving fairly on a jury — not
+  by being active or popular." See
+  [`10-reputation-is-earned-by-helping.md`](10-reputation-is-earned-by-helping.md).
 
 ### G. Neighbours warning each other (not a police force)
 > "Communities can tip each other off — 'heads up, this account caused trouble

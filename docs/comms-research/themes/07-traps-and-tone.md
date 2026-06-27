@@ -56,7 +56,21 @@ claim feel hollow.
 organisers, and it buries the lede. Tech is *how*; lead with *what* and *why*.
 Tech specs belong in the r/rust post and CONTRIBUTING.md, not here.
 
-### 5. Blockchain confusion
+### 5. "Reputation" misreads (social-credit / clout)
+"Reputation" makes savvy readers hear **social-credit surveillance** or
+**influencer clout**. Both are the opposite of this. The fix is positive, not a
+disclaimer: standing is **earned by helping** the community govern itself, and
+**posting/liking/sharing are irrelevant to it** — engagement is not reputation.
+Lead with "trust you earn by helping", never "your score." Full theme:
+[`10-reputation-is-earned-by-helping.md`](10-reputation-is-earned-by-helping.md).
+
+### 6. Punitive misread ("is this cancel culture?")
+Any mention of juries/consequences risks reading as a punishment machine. Pair
+every such mention with the restorative outcome — repair before exile, a way
+back. "Accountability without annihilation." Full theme:
+[`09-anti-cancel-culture.md`](09-anti-cancel-culture.md).
+
+### 7. Blockchain confusion
 The repo is explicit: **no tokens, no on-chain voting, blockchain is a
 maybe-someday narrow audit anchor (V3).** If "blockchain" appears anywhere near
 the lead, readers will assume crypto and either bounce (FOSS/left organisers

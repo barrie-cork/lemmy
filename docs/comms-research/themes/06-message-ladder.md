@@ -66,8 +66,15 @@ can actually use.*
 
 - *"Is this crypto / blockchain?"* → No. No tokens, no on-chain voting, never
   "more money = more power." (See traps file.)
-- *"Is it a surveillance / social-credit score?"* → No. Standing is earned, opt-in,
-  shows abilities not a number, and fades over time. The opposite of social credit.
+- *"Is it a surveillance / social-credit score?"* → No — the opposite. Standing is
+  **earned by helping** the community (vouching, fair reporting, serving on panels,
+  showing up), shows abilities not a number, and fades over time. It rewards being
+  useful to others, not obeying a watcher. (See `10-reputation-is-earned-by-helping.md`.)
+- *"Isn't this just cancel culture / a pile-on machine?"* → The opposite.
+  Responses start gentle and escalate only if needed (a note, then reduced reach,
+  then a pause; bans last). A fair panel decides — not a mob — with a guaranteed
+  appeal and a way back. Accountability without annihilation. (See
+  `09-anti-cancel-culture.md`.)
 - *"Isn't vouching just gatekeeping?"* → There's a time-based way in too. And
   vouching is what makes it resistant to fake accounts and brigading.
 - *"Do I have to leave Lemmy / Matrix / my current tool?"* → No — it's built to
