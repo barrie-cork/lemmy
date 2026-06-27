@@ -56,6 +56,21 @@ highest-conversion messages — each answers a pain organisers know intimately:
 - **The community sets its own stakes, by consent.** How much a violation costs is
   decided by the community when they write their rules and all agree to live by
   them — not by us, not by a hidden algorithm. (theme 10)
+- **Bots can't get a reference; provocateurs can't hide who let them in.**
+  Invitation + surety means every member was vouched for by an accountable member
+  who staked their own standing — a human, community-owned wall against bots, AI
+  spam, astroturfing, paid agitators, and sock-puppets.
+  ([`themes/11-invitation-as-defence.md`](themes/11-invitation-as-defence.md))
+- **No moderator class — everybody moderates, a little.** The work is shared
+  across the membership like jury duty; responsibility *and* workload are
+  distributed, and the bigger the community the lighter each person's share. The
+  cure for moderator burnout.
+  ([`themes/12-everybody-moderates.md`](themes/12-everybody-moderates.md))
+
+> **Why now:** bots, spam, astroturfing, paid provocateurs and pile-ons are the
+> defining daily experience of mainstream social media — and people are exhausted
+> by it and want out. The exhaustion *is* the demand. Copy meets it with relief,
+> not a lecture. (themes 03 + 11)
 
 ## Folder map (OKF-style: human-readable + machine-readable side by side)
 
@@ -72,7 +87,9 @@ comms-research/
 │   ├── 07-traps-and-tone.md     ← what to avoid (jargon, romance, utopia-creep)
 │   ├── 08-the-word-for-what-it-does.md ← moderation/mediation/governance choice
 │   ├── 09-anti-cancel-culture.md← restorative = accountability without exile
-│   └── 10-reputation-is-earned-by-helping.md ← standing from jury service, not clout
+│   ├── 10-reputation-is-earned-by-helping.md ← standing from jury service, not clout
+│   ├── 11-invitation-as-defence.md ← surety stops bots/provocateurs/astroturf
+│   └── 12-everybody-moderates.md← shared moderation; load shrinks as it grows
 ├── research-prompts/
 │   └── perplexity-deep-research.md ← the prompt to run for evidence-based comms
 ├── source-notes/

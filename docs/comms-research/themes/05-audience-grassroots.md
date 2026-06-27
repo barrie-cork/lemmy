@@ -27,9 +27,19 @@ they know why it hurts.
 - "A real harm happened and we had no fair way to deal with it, so it festered."
 - "The loudest / most online people end up with all the influence." *(clout pain
   → theme 10)*
+- "We get swamped by bots, spam, and obvious fake accounts." *(→ theme 11)*
+- "Someone joined just to stir up trouble and divide us — maybe deliberately."
+  *(agent-provocateur pain → theme 11)*
 - "New people show up, cause chaos, disappear — how do we know who to trust?"
-- "I'm burned out being the unpaid referee."
+- "I'm burned out being the unpaid referee." *(→ theme 12: everybody moderates)*
 - "If I step back, it all falls apart, because everything's in my head."
+  *(single-point-of-failure → theme 12)*
+
+> Context (founder, 2026-06-27): these are **the defining problems of mainstream
+> social media right now** — bots, spam, astroturfing, paid agitators, pile-ons,
+> burnout. **People are sick of it and want an alternative.** We don't need to
+> argue the problem exists; they live it daily. The copy's job is to offer
+> *relief* and a *real way out*, not to lecture. The exhaustion is the demand.
 
 > The deepest pain isn't *features* — it's **the loneliness and conflict of being
 > the one holding it together.** The pitch that lands: *this shares the load
@@ -46,6 +56,10 @@ they know why it hurts.
   community-set-stakes → theme 10)*
 - This **can't be gamed for clout** — standing comes from helping, not from being
   loud or popular. *(theme 10)*
+- This **keeps the bots and bad-faith infiltrators out** — without an opaque
+  algorithm; through who's willing to vouch for you. *(theme 11)*
+- This **won't burn me out** — the moderation load is shared by everyone and gets
+  *lighter* as we grow, not heavier. *(theme 12)*
 - This is **practical** — I can actually use it, not a 200-page theory.
 
 ## What they're allergic to (instant bounce)
