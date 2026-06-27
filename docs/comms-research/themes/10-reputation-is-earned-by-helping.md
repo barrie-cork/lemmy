@@ -83,6 +83,52 @@ loop: **help → trusted → help more.**
 > direction — framed as design, not present tense. See the status note in
 > [`../source-notes/repo-essence-extract.md`](../source-notes/repo-essence-extract.md).
 
+## Standing goes both ways — and the community sets the stakes
+
+Founder (2026-06-27): reputation isn't only *earned*. It also reflects **being
+aware of others and of your own impact on the group.** So it moves in both
+directions:
+
+- **Up** — by helping (today: serving fairly as a juror).
+- **Down** — if you post something that gets **reported and found to break the
+  community's consent rules**, your standing takes a hit.
+
+That two-way movement is what makes standing *mean* something — it's a real
+reflection of how you've affected the group, not a participation trophy.
+
+### The crucial part: the community sets the cost, and everyone consents
+
+**How *much* a violation costs you is not fixed by the software.** The community
+decides it — when they **write their own rules and all agree to live by them.**
+The same act might cost a little in one community and a lot in another, because
+each community chose its own stakes, together, in advance.
+
+This is the [Pillar 1 "you make your own rules"](01-essence.md) idea applied to
+*consequences*, and it's the cleanest answer to "who decides what's fair?":
+
+> **You do — together, up front.** Nobody outside the group sets the penalties.
+> The group agrees the rules and the stakes, and then everyone lives by the deal
+> they made. The system just runs the agreement faithfully and in the open.
+
+Why this matters for the messaging:
+- It's the deepest form of **consent** — you're not subject to rules you didn't
+  agree to. (Ties to "consensus-based" and "democratic" in the six core words.)
+- It defuses the fairness objection: the penalties aren't *our* opinion or a
+  hidden algorithm — they're *the community's own agreed terms.*
+- It reinforces that the product is a **neutral, customisable layer**: it doesn't
+  impose values, it lets a group enforce *its own*, transparently.
+
+> One-liner: **"Break the rules your community agreed, and your standing reflects
+> it — by exactly the amount your community decided, together, in advance."**
+
+### Honesty flag
+
+How configurable the *severity numbers* are in the live v0 vs. the design — verify
+against the repo (01-vision §5.2 sponsor-liability table and the sanction ladder
+are documented; confirm which knobs are community-settable today vs. planned)
+before stating specifics in public copy. The *principle* (community sets and
+consents to the stakes) is sound; the *exact dials* need a code check.
+
 ## How it connects to the other themes
 
 - **Anti-social-credit** (the [`04-analogies.md`](04-analogies.md) "new-coworker

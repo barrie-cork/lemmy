@@ -64,6 +64,10 @@ hooks:
     hard_line: "posting/liking/sharing are IRRELEVANT to standing — engagement is not reputation; severs attention->power link"
     not: [social-credit-score, influencer-clout, popularity-contest, single-number-leaderboard]
     caution: "always frame as 'earn by helping', never 'gain points'/'level up'; never show a number; today=jury participation"
+    two_directional: "standing also DROPS when a post is reported and found to break the community's consent rules"
+    community_sets_stakes: "how much a violation costs is set BY THE COMMUNITY when they write their rules and all consent to them — not by the software, not by us, not by a hidden algorithm"
+    stakes_one_liner: "Break the rules your community agreed, and your standing reflects it — by exactly the amount your community decided, together, in advance."
+    stakes_honesty: "verify which severity dials are community-settable in live v0 vs design before public specifics (repo 01-vision 5.2 + sanction ladder)"
 
 # Anchor analogies (themes/04). leak = what it gets wrong, must be named.
 analogies:

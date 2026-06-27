@@ -65,7 +65,13 @@ it rewards helping, it doesn't surveil compliance.
 
 And a hard line: **posting, liking, and sharing are irrelevant to standing.**
 Engagement is not reputation — you can't farm trust with content or popularity.
-That severs the attention→power link that corrupts ordinary platforms. See
+That severs the attention→power link that corrupts ordinary platforms.
+
+Standing also moves **both ways**: it drops if your posts are reported and found
+to break the community's consent rules — and crucially, **the community itself
+sets how much that costs, when they write their rules and all agree to live by
+them.** Consequences aren't imposed from outside or by a hidden algorithm;
+they're the group's own agreed terms, run faithfully and in the open. See
 [`10-reputation-is-earned-by-helping.md`](10-reputation-is-earned-by-helping.md).
 
 > Make · Decide · Repair — three words, in order. A reader who remembers only
