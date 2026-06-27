@@ -1,0 +1,115 @@
+# Brehon Consensus — structured message bank
+# Machine-readable companion to themes/. Source of truth for website/CMS reuse.
+# Status: DRAFT for founder review (2026-06-27). Not approved copy.
+# Honesty rule: anything tagged status:vision must be rendered as "designed to /
+# will", never present tense. See themes/07-traps-and-tone.md.
+
+meta:
+  audience_primary: grassroots-organisers
+  tone: plain, warm, confident, sober
+  reviewed: false
+  date: 2026-06-27
+
+# The locked framing decisions (founder, 2026-06-27)
+framing:
+  two_jobs: "Membership & Mediation"
+  pillars: [make, decide, repair]            # You make rules / decide together / repair not punish
+  umbrella_noun: governance                  # abstract level only; never the greeting
+  greeting_verb: "govern yourselves"         # lead with the verb, not a category noun
+  narrative_spine: "There are lots of alternatives"   # anti-TINA
+  brehon_role: "evidence alternatives exist, not heritage romance"
+  category_by_depth:                          # which noun for which reader (themes/02)
+    organiser: "a fair way for your group to govern itself"
+    curious_press: "an open governance layer for online communities"
+    technical: "a portable open-source governance layer / emerging standard"
+
+# Core lines at each rung (themes/06)
+ladder:
+  rung0_7word:
+    primary: "Fair self-government for any online community."
+    warm: "Run your group fairly — together."
+  rung1_sentence: >
+    Brehon Consensus is an open, fair way for any group to govern itself —
+    deciding together who belongs and how to put things right, in the open,
+    with repair instead of punishment.
+  rung2_paragraph_ref: themes/06-message-ladder.md#rung-2
+  rung3_pamphlet_ref: themes/06-message-ladder.md#rung-3
+
+# The three pillars, expanded (themes/01)
+pillars:
+  - id: make
+    line: "You make your own rules."
+    means: "The group writes its own rules and can change them. Self-organising."
+    mechanic: customisable-rule-sets
+  - id: decide
+    line: "You decide together, in the open."
+    means: "Serious decisions by ordinary members, picked like a jury; every one logged with reasons."
+    mechanic: [juries, consensus-thresholds, public-case-log]
+  - id: repair
+    line: "You repair, you don't just punish."
+    means: "Responses start gentle and aim to fix harm and bring people back. Banishment is last resort."
+    mechanic: [graduated-restorative-sanctions, reintegration, appeals]
+
+# Anchor analogies (themes/04). leak = what it gets wrong, must be named.
+analogies:
+  - id: email
+    tier: 1
+    carries: [open-standard, federation, no-central-owner, cross-protocol]
+    leak: "email moves messages; this makes decisions — say so explicitly"
+  - id: job-reference
+    tier: 1
+    carries: [sponsorship, shared-risk, sybil-resistance]
+    leak: "can feel like gatekeeping — pair with time-based fallback"
+  - id: jury-duty
+    tier: 1
+    carries: [peer-judgment, no-moderator-class, transparency]
+    leak: "evokes courts/punishment — pair with restorative outcome"
+  - id: rulebook-constitution
+    tier: 2
+    carries: [customisable-rules, self-organisation]
+  - id: repair-cafe
+    tier: 2
+    carries: [restorative, reintegration, inclusivity]
+  - id: new-coworker-trust
+    tier: 2
+    carries: [earned-slowly, capability-not-score]
+    leak: "must distance from social-credit-score / credit-rating"
+  - id: neighbours-warning
+    tier: 2
+    carries: [federation-advisory, local-sovereignty]
+
+# Words we use deliberately (themes/07, 08)
+word_choices:
+  moderation: "use to be FOUND and understood (the searchable pain-word)"
+  mediation:  "use to REVEAL the difference — fair, peer, repair-focused"
+  governance: "use as abstract umbrella only (press/category), never greeting"
+  sequence:   "name the jobs -> moderation/mediation pivot -> governance umbrella"
+
+# Things to NEVER do in public copy (themes/07)
+forbidden:
+  - blockchain-in-lead          # misleads as crypto; it's a maybe-someday V3 audit anchor
+  - tokens-or-onchain-voting    # opposite of the project
+  - social-credit-score-framing
+  - celtic-mysticism-romance
+  - lemmy-fork-as-headline      # that's how, not what
+  - utopia-overclaim            # it governs membership+moderation only
+  - future-as-present-tense     # cross-protocol is vision, not shipped
+
+# Proof points (handle with care — VERIFY before publishing; themes/03)
+proof_points:
+  - claim: "humans have run fair non-hierarchical rule-based societies repeatedly"
+    source: "Graeber & Wengrow, The Dawn of Everything (2021)"
+    status: verify-exact-phrasing
+  - claim: "Brehon law ran for centuries with no state/police/prisons"
+    source: "repo 01-vision §3; Higgins 2010"
+    status: verify
+  - claim: "customary/tribal law invoked successfully in a modern court case"
+    source: "founder recollection — UNVERIFIED; find citable case (Mabo / tikanga / First Nations)"
+    status: must-verify-before-use
+
+status_honesty:
+  stage: alpha
+  team: solo-developer
+  shipped: "v0 governance scope, Lemmy host only"
+  vision_not_shipped: [matrix, peertube, meshcore, cross-protocol, full-federation]
+  rule: "present tense for shipped only; 'designed to'/'will' for vision"

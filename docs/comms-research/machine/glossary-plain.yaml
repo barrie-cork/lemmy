@@ -1,0 +1,65 @@
+# Jargon -> plain-English swap table
+# Machine-readable. For copy linting: if a "term" appears in public copy,
+# swap to "plain" (or the audience phrase). Source: themes/05, source-notes/.
+# Status: DRAFT 2026-06-27.
+
+swaps:
+  - term: moderation case
+    plain: "dealing with a problem"
+    note: "keep 'moderation' as the searchable category word; use plain in body"
+  - term: sanction
+    plain: "consequence / what happens next"
+  - term: graduated sanction
+    plain: "a response that starts gentle and only escalates if needed"
+  - term: restorative sanction
+    plain: "putting it right / a second chance"
+  - term: reputation
+    plain: "standing / being trusted"
+  - term: reputation dimension
+    plain: "the different ways you can be trusted (reporting, juries, vouching, taking part)"
+  - term: reputation score
+    plain: "AVOID — implies a leaderboard number; say 'standing you earn'"
+  - term: capability / capability threshold
+    plain: "earning the right to do something"
+  - term: sponsorship / surety
+    plain: "vouching / a reference / signing someone in"
+  - term: endorsement
+    plain: "backing someone / putting in a good word"
+  - term: jury
+    plain: "a panel of ordinary members, picked like jury duty"
+  - term: quorum
+    plain: "enough members agreed"
+  - term: consensus threshold
+    plain: "how much agreement is needed"
+  - term: appeal
+    plain: "asking for a second look by a new, bigger panel"
+  - term: federation
+    plain: "different communities staying in touch and warning each other"
+  - term: federated
+    plain: "made of many independent communities, not one central site"
+  - term: instance
+    plain: "one community's own home / site"
+  - term: tuath
+    plain: "AVOID in public copy — internal/vision term only"
+  - term: public case log
+    plain: "an open record of decisions and why they were made"
+  - term: provisional user
+    plain: "a new member still earning trust"
+  - term: ActivityPub / protocol
+    plain: "the open standard that lets different apps talk to each other (like email's)"
+  - term: ActivityPub
+    plain: "AVOID naming directly to organisers; use the email-standard analogy"
+  - term: hash chain / tamper-evident log
+    plain: "a record that can't be secretly changed afterwards"
+  - term: sybil attack
+    plain: "fake accounts / one person pretending to be many"
+  - term: brigading
+    plain: "an outside mob piling on"
+  - term: capture (by cliques)
+    plain: "a small group taking it over"
+  - term: event-sourced
+    plain: "AVOID — engineer term; say 'built up from what actually happened'"
+  - term: extism / wasm / plugin host
+    plain: "AVOID in public copy — contributor docs only"
+  - term: Lemmy fork
+    plain: "built on Lemmy (open-source Reddit-style) — mention as 'how', not headline"
