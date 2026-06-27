@@ -23,11 +23,25 @@ it's this positive fact:
 | Social-credit score — surveilled for *compliance*, punished for deviance | **Earned for *contribution*** — you rise by helping, not by obeying |
 | Popularity / clout — most followers, most likes | **Not popularity** — it's reliability and good-faith service, not reach |
 | A single number / leaderboard | **No score shown** — just quiet abilities you've earned ("trusted reporter") |
-| Permanent record held over you | **Decays over time** — it must be kept up by continued good action; old standing fades |
+| Permanent record held over you | **Designed to fade** — standing is *meant* to be kept up by continued good action, not banked forever (decay is built but off by default in v0 — see honesty flag) |
 | Top-down, the platform judges you | **Bottom-up, your peers' trust** — it's the community vouching, not an algorithm scoring |
 
 > One-liner: **"It's not a score that watches you — it's trust you earn by
 > showing up for each other."**
+
+### Pre-empt the misread out loud (research C + G)
+
+The evidence says don't *wait* for the social-credit fear — **name it and kill it
+first**, because savvy readers are already thinking it. Our layer gives us the
+concrete denial:
+
+> **No, this isn't *Black Mirror* "Nosedive."** There's no number on your profile,
+> nobody scores you for compliance, and you can't farm it by posting. Standing is
+> just whether your community has come to trust you to help run things — earned by
+> serving on juries and reporting honestly, by the rules *you* all agreed.
+
+Keep this as an explicit up-front line wherever "standing/reputation" leads, not a
+buried FAQ — the misread is too fast and too damaging to leave implicit.
 
 ## ★ Hard line: engagement is NOT reputation (founder, 2026-06-27)
 
@@ -57,30 +71,40 @@ the link that corrupts ordinary online communities.
 
 Be precise and honest here — there's a gap between the *design* and what's *live*.
 
-**What's real right now (v0):** standing is earned by **participating in the
-community's governance — specifically, acting as a juror.** That means
-**volunteering your time to carefully consider cases according to the rules the
-community set for itself.** Showing up for jury duty, reading the case fairly,
-weighing it against *your community's own rules*, and deciding in good faith —
-that is the concrete contribution that builds trust today.
+**What's real right now (v0) — verified against the code 2026-06-27:** standing is
+earned two concrete ways today:
 
-> Today's one-liner: **"You earn standing by showing up to help judge cases
-> fairly — by the rules your community chose."**
+- **Serving on a jury** — volunteering to weigh a case against the rules your
+  community set, and deciding in good faith. *(juror who aligns with the panel:
+  +10; the live core mechanic.)*
+- **Reporting accurately** — flagging a real rule-break that the jury then upholds.
+  *(upheld report: +10; a dismissed/bad-faith report: −5 — so crying wolf costs
+  you.)*
+
+Both are live in v0. Showing up for jury duty and reporting fairly are the two
+concrete contributions that build trust today.
+
+> Today's one-liner: **"You earn standing by helping judge cases fairly — and by
+> reporting real problems honestly — all by the rules your community chose."**
 
 **The fuller design (direction, not all shipped):** the docs describe four
 "dimensions" of contribution. In human terms, four ways of helping:
 
-1. **Judging fairly** — serving well as a juror *(the live one today)*.
-2. **Reporting fairly** — flagging real problems accurately (not crying wolf).
-3. **Showing up** — consistent, good-faith participation over time.
-4. **Vouching well** — bringing in good people and backing them responsibly.
+1. **Judging fairly** — serving well as a juror *(live today)*.
+2. **Reporting fairly** — flagging real problems accurately, not crying wolf
+   *(live today: +10 upheld / −5 dismissed)*.
+3. **Vouching well** — bringing in good people and backing them responsibly
+   *(live today: endorsement/sponsor standing)*.
+4. **Showing up** — consistent, good-faith participation over time *(design — no
+   tenure-based standing gain is wired yet)*.
 
 Help on any of these and you earn the standing to do more of it. That's the whole
 loop: **help → trusted → help more.**
 
-> Copy guard-rail: when describing the *present*, lead with **jury participation**
-> (it's concrete, relatable, and true). Use the other three as "and over time…"
-> direction — framed as design, not present tense. See the status note in
+> Copy guard-rail (verified 2026-06-27): three of the four are LIVE — jury
+> service, accurate reporting, and vouching/endorsement. Only "showing up"
+> (tenure-based gain) is design, not shipped — frame *that one* as "and over
+> time…", present-tense the other three. See the status note in
 > [`../source-notes/repo-essence-extract.md`](../source-notes/repo-essence-extract.md).
 
 ## Standing goes both ways — and the community sets the stakes
@@ -121,13 +145,19 @@ Why this matters for the messaging:
 > One-liner: **"Break the rules your community agreed, and your standing reflects
 > it — by exactly the amount your community decided, together, in advance."**
 
-### Honesty flag
+### Honesty flag — RESOLVED 2026-06-27 (verified against config.rs)
 
-How configurable the *severity numbers* are in the live v0 vs. the design — verify
-against the repo (01-vision §5.2 sponsor-liability table and the sanction ladder
-are documented; confirm which knobs are community-settable today vs. planned)
-before stating specifics in public copy. The *principle* (community sets and
-consents to the stakes) is sound; the *exact dials* need a code check.
+The severity numbers **are** community-settable in live v0: the sanction deltas
+(`DEFAULT_DELTAS_*`), jury thresholds, and panel sizes are all config rows the
+admin/community can override per-community (the `admin_config` handler + segment
+scoping, e.g. `jury.panel_size.founder.severe`). So the *principle* (community
+sets and consents to the stakes) is sound **and** the dials are real in v0 — safe
+to state in present tense.
+
+**One exception to keep honest:** reputation **decay** is wired but **off by
+default** (`feature.reputation_v1_decay_enabled` = false). So "you set how fast
+standing fades" is *designed-to*, not default-live — say "can be enabled", never
+present-tense "fades".
 
 ## How it connects to the other themes
 
@@ -137,9 +167,11 @@ consents to the stakes) is sound; the *exact dials* need a code check.
   whenever "reputation/standing" appears.
 - **Shared risk / vouching** (Pillar-adjacent): helping includes *vouching well*,
   which ties back to the sponsorship trust-chain.
-- **Anti-elite** (from repo 01-vision principle 1): because standing *decays* and
-  must be re-earned by continued helping, no one becomes a permanent elite. Earned
-  slowly, kept by helping, never owned.
+- **Anti-elite** (from repo 01-vision principle 1): standing is *designed to* fade
+  and be re-earned by continued helping, so no one becomes a permanent elite —
+  earned slowly, kept by helping, never owned. (Honesty: the decay mechanic is
+  built but **off by default in v0** — frame as "designed to", not "does fade".
+  See the honesty flag above.)
 
 ## Copy guard-rails
 

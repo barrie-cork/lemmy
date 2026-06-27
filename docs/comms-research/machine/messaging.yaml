@@ -65,15 +65,17 @@ hooks:
     caution: "NEVER use the phrase 'cancel culture' in lead copy (research C2: partisan/toxic) — describe the lived experience. Re-express in OUR mechanic (member jury + your rules + repair), not borrowed slogans. Pro-process, not a culture-war side."
   reputation_by_helping:               # themes/10
     line: "Likes don't buy you standing here. Helping does."
-    means_today: "standing earned by JURY SERVICE (juror_aligned +10) AND by accurate REPORTING (reporter_upheld +10) — both live v0 mechanics, verified config.rs 2026-06-27"
-    means_design: "ways of helping: judging fairly (live), reporting fairly (live), vouching/endorsement (live); 'showing up'/tenure-based gains = design"
+    means_today: "standing earned by JURY SERVICE (juror_aligned +10) AND accurate REPORTING (reporter_upheld +10, dismissed -5) AND vouching/endorsement — all live v0, verified config.rs 2026-06-27"
+    means_design: "live: judging fairly, reporting fairly, vouching/endorsement. DESIGN-ONLY: 'showing up'/tenure-based gains (not wired)"
+    nosedive_preempt: "Name and kill the social-credit fear up front (research C/G): 'this isn't Black Mirror Nosedive — no number on your profile, no compliance score, can't be farmed by posting; just whether your community trusts you to help run things'"
     hard_line: "posting/liking/sharing are IRRELEVANT to standing — engagement is not reputation; severs attention->power link"
-    not: [social-credit-score, influencer-clout, popularity-contest, single-number-leaderboard]
-    caution: "always frame as 'earn by helping', never 'gain points'/'level up'; never show a number; today=jury participation"
+    not: [social-credit-score, influencer-clout, popularity-contest, single-number-leaderboard, black-mirror-nosedive]
+    caution: "always frame as 'earn by helping', never 'gain points'/'level up'; never show a number; today=jury service + accurate reporting + vouching"
+    decay_honesty: "reputation DECAY is wired but DEFAULT-OFF (feature.reputation_v1_decay_enabled=false) — say 'designed to fade / can be enabled', NEVER present-tense 'standing fades'"
     two_directional: "standing also DROPS when a post is reported and found to break the community's consent rules; sustained low standing shrinks your role (less likely called for jury; below a floor, not called / can't vote on some things)"
     community_sets_stakes: "how much a violation costs is set BY THE COMMUNITY when they write their rules and all consent to them — not by the software, not by us, not by a hidden algorithm"
     stakes_one_liner: "Break the rules your community agreed, and your standing reflects it — by exactly the amount your community decided, together, in advance."
-    stakes_honesty: "verify which severity dials are community-settable in live v0 vs design before public specifics (repo 01-vision 5.2 + sanction ladder)"
+    stakes_honesty: "RESOLVED 2026-06-27: severity deltas/thresholds/panel-size ARE community-settable in live v0 (DEFAULT_DELTAS_* config rows + admin_config handler). Safe present-tense. Only decay is default-off (see decay_honesty)."
   invitation_as_defence:               # themes/11
     line: "Bots can't get a reference. Provocateurs can't hide who let them in."
     mechanism: "inviter stakes own reputation on you -> entry costly + traceable; bad behaviour ripples up the vouching chain"
