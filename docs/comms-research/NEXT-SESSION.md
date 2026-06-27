@@ -15,10 +15,63 @@ prompt). The user is now bringing back the **Perplexity Deep Research output**.
    (372KB, immutable source). Read it — then go to Step 1. Do NOT re-fetch or
    re-run; the findings are in.
 
+## Step 1.0 — DIGEST the report first, via subagent fan-out (DO NOT read it whole)
+
+The report is **2,669 lines / 372KB (~95K tokens)**. Reading it into the main
+context will blow your working window and leave no room to actually do the
+reconcile. **Do not read the file end-to-end.** Instead, **fan out one subagent
+per section** (the `Explore` or `general-purpose` agent), each reading ONLY its
+bounded line-range and returning a tight, fixed-shape digest. The main agent then
+holds eight ~1-page digests (~8–12K tokens total), not the raw 95K.
+
+The report has clean `# Section A–G` boundaries (verified 2026-06-27). Dispatch
+all eight in ONE message so they run concurrently:
+
+| Agent | Section | Read ONLY lines | Reconciles into |
+|---|---|---|---|
+| 1 | A — explaining novel ideas | 26–357 | themes/04, 06 |
+| 2 | B — framing / narrative / anti-TINA | 358–702 | themes/03 |
+| 3 | C — trust / reputation / hype | 703–1015 | themes/10, 07 |
+| 4 | C2 — cancel culture / restorative / consent | 1016–1305 | themes/09, 10 |
+| 5 | D — competitor positioning | 1306–1858 | themes/02, 08 |
+| 6 | E — history verification | 1859–2189 | themes/03 + proof_points |
+| 7 | F — naming | 2190–2525 | themes/02, 08 |
+| 8 | G — synthesis / rules / risks | 2526–2669 | new themes/16 |
+
+**Prompt each subagent like a colleague who hasn't seen the project** (per
+`.claude/rules/advisor-orchestrator.md` §6.3). Give it: the file path + its EXACT
+line range (`Read` with `offset`/`limit`), one line on what Brehon Consensus is,
+the theme file(s) its section maps to, and this **fixed digest schema** so the
+eight outputs compose:
+
+```
+Return ONLY this structure (no preamble, ≤400 words):
+## Section <X> digest
+- KEY FINDINGS (3–6 bullets): the evidence-backed claims, each with its source/citation
+- CONFIRMS: which of our existing theme positions this evidence supports (name the theme + claim)
+- CHALLENGES/CORRECTS: anything that contradicts or complicates a theme — what changes and why
+- VERIFY FLAGS: any claim the report itself marks contested/unverifiable (esp. Section E history)
+- ACTION ITEMS: concrete edits to make to the named theme file(s)
+```
+
+Because each subagent's *raw* section text stays in the subagent and only the
+digest returns, the main context never holds the 95K. Save the eight digests
+concatenated to `research-prompts/digests-2026-06-27.md` (commit it) — that file,
+not the raw report, is the working input for Step 1.
+
+> Cost note: 8 subagents × one bounded read each is far cheaper than one main-agent
+> 95K read, AND it parallelises. If a section is still too big for one agent (none
+> here exceed ~550 lines), split that one agent's range in half.
+
+> Smaller alternative (if you can't fan out): process **one section per turn**
+> in the main context — read lines X–Y, reconcile into its theme, commit, drop it,
+> next turn. Slower, serial, but bounded. The fan-out is strictly better.
+
 ## Step 1 — RECONCILE the findings against the themes (this is the main job)
 
-The research is *evidence to harden or correct the themes*, not a thing to admire.
-Go section by section (the prompt maps each to specific files):
+Work from the **digests** (Step 1.0 output), not the raw report. The research is
+*evidence to harden or correct the themes*, not a thing to admire. Go section by
+section (the prompt maps each to specific files):
 
 | Research section | Reconcile into |
 |---|---|
