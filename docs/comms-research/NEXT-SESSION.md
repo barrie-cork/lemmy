@@ -10,9 +10,10 @@ prompt). The user is now bringing back the **Perplexity Deep Research output**.
    ("bottom-up, not top-down"), the folder map.
 2. Skim the `themes/` files 01–15. They are the agreed foundation. Do NOT
    re-litigate decisions already locked there.
-3. Save the user's research output verbatim as
-   `research-prompts/perplexity-results-<YYYY-MM-DD>.md` and commit it before
-   touching anything else (raw source, immutable).
+3. ✅ DONE (2026-06-27): the research output is already committed at
+   [`research-prompts/perplexity-results-2026-06-27.md`](research-prompts/perplexity-results-2026-06-27.md)
+   (372KB, immutable source). Read it — then go to Step 1. Do NOT re-fetch or
+   re-run; the findings are in.
 
 ## Step 1 — RECONCILE the findings against the themes (this is the main job)
 

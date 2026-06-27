@@ -120,9 +120,14 @@ commits spread is healthy — small per-commit units, no single oversized edit.
       "AskUserQuestion for clarity if needed").
 - [x] What-to-change #2 (batch wiring into one consolidated pass): folded into the
       same lesson as #1 (same root: don't write per-message during ideation).
-- [ ] What-to-change #3 (founder factual claims → must-verify proof-point at first
-      mention): augment existing `feedback_verify_automated_reviewer_claims_against_compiler.md`
-      family OR new `feedback_founder_claim_must_verify_at_first_mention.md`.
+- [x] What-to-change #3 (founder factual claims → must-verify proof-point at first
+      mention): promoted to new `feedback_founder_claim_must_verify_at_first_mention.md`
+      this session (content/marketing analogue of the verify-claims-against-compiler family).
+- [x] What-to-change #4 (raw research dump): resolved — the 379KB Perplexity brief
+      was renamed to the handover convention `research-prompts/perplexity-results-2026-06-27.md`
+      and committed deliberately (immutable research input, like the chat*.md sources).
+      Stray `research/` dir removed. NOT reconciled into themes — that's next session's
+      gated work per NEXT-SESSION.md.
 
 ---
 
