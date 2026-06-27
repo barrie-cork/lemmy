@@ -43,6 +43,25 @@ because it means this frame rests on cited evidence, not just assertion.
 
 ---
 
+## Working method (binding for the whole reconcile) — interpret to OUR layer
+
+**Founder, 2026-06-27:** the research tells us *what works rhetorically*; it does
+not give us copy. Two rules govern how every finding gets incorporated:
+
+1. **Re-express to the Brehon Consensus layer, in our own voice.** A research
+   label (e.g. "accountability without annihilation") is **internal strategy only,
+   never public copy.** Public lines are rebuilt around *what our layer actually
+   brings* — member-drawn jury · judged by the community's own rules · repair-first
+   with a way back · earned standing · invitation/surety. The mechanic is the
+   message; the relief is the consequence.
+2. **Themes are written in audience-neutral mechanics; per-group spins live in
+   `drafts/` only.** A theme says "your members handle it, by your rules"; the
+   chess-club / gardeners / neighbours / activists versions are drafting work, not
+   theme content. (Keeps theme-05's on-ramp the single source of audience truth.)
+
+Also locked: **never use the phrase "cancel culture" in lead copy** (research C2 —
+partisan, toxic); describe the lived experience. FAQ-only if a reader raises it.
+
 <!-- Add further founder-flagged standout points below as they come, newest last.
      Keep each as SP-N with: verbatim/near-verbatim framing, why it's strong,
      where it lives, tone caution, status. -->

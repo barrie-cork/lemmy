@@ -58,9 +58,11 @@ pillars:
 # Sharp positioning hooks (themes/09, 10) — high-conversion, handle with care
 hooks:
   anti_cancel_culture:                 # themes/09
-    line: "This is not cancel culture. Accountability without annihilation — repair before exile, and a way back."
+    line: "Your members handle it, by your rules — repair, not exile. A fair hearing, and a way back."
+    line_alts: ["A fair hearing, and a way back.", "Fall out without falling apart."]
+    internal_label: "accountability without annihilation"   # STRATEGY TERM ONLY — never public copy
     contrast: "graduated note->reduced-reach->pause->exclusion(last); fair panel not a mob; guaranteed appeal; reintegration"
-    caution: "charged term — lead with the lived experience, not the slogan; pro-process, not a culture-war side"
+    caution: "NEVER use the phrase 'cancel culture' in lead copy (research C2: partisan/toxic) — describe the lived experience. Re-express in OUR mechanic (member jury + your rules + repair), not borrowed slogans. Pro-process, not a culture-war side."
   reputation_by_helping:               # themes/10
     line: "Likes don't buy you standing here. Helping does."
     means_today: "standing earned by JURY SERVICE (juror_aligned +10) AND by accurate REPORTING (reporter_upheld +10) — both live v0 mechanics, verified config.rs 2026-06-27"

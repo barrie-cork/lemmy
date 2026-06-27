@@ -6,9 +6,23 @@ culture**. This is one of the strongest, most relatable hooks in the whole pitch
 
 ## The core claim
 
-> **This is not cancel culture.** When someone messes up, the reflex isn't
-> exile — it's a fair process that starts gentle and tries to put it right. A
-> note before a pause. Repair before removal. People can come back.
+> **When someone breaks the rules, your own members handle it — by the rules you
+> all agreed — and the goal is to put it right, not to throw people out.** A note
+> before a pause. Repair before removal. A fair hearing, and a way back.
+
+This is what our layer actually does: a report goes to a **jury drawn from
+ordinary members** (not a moderator, not the platform), judged **against the
+community's own written rules**, with responses that **start gentle and aim to
+repair**, an **appeal**, and a **route back**. The anti-cancel-culture punch is a
+*consequence* of those mechanics — we describe the mechanics, the reader feels the
+relief.
+
+> **Interpretation rule (founder, 2026-06-27):** the research label "accountability
+> without annihilation" is an **internal strategy term only — never public copy**.
+> Public lines are re-expressed in our own voice, around what the Brehon Consensus
+> layer specifically brings (member jury · your rules · repair · a way back).
+> Avoid even the *phrase* "cancel culture" in lead copy (research C2: it's
+> partisan and toxic); describe the lived experience instead.
 
 ## Why this lands so hard with organisers
 
@@ -31,7 +45,9 @@ apart. Naming it directly signals: **we understand the actual problem you have.*
 | Permanent | Reintegration; no permanent outcasts |
 | Punishment as the goal | Putting it right as the goal |
 
-> The line to remember: **"Accountability without annihilation."**
+> Internal strategy label (NOT for public copy): "accountability without
+> annihilation." The public line is re-expressed per the interpretation rule
+> above — e.g. *"Your members handle it, by your rules — repair, not exile."*
 
 ## Careful framing — this is a charged term
 
@@ -44,10 +60,11 @@ people. Handle with skill, not as a culture-war flag:
 - **Don't take a side in the culture war.** We're not anti-accountability (the
   left's fear) *or* pro-impunity (the right's caricature). We're **pro-process**.
   Real harms get taken seriously; responses are fair and proportionate.
-- **The positive frame is stronger than the negative.** "Restorative" /
-  "second chances" / "repair" / "accountability without exile" carries the idea
-  without the baggage of the phrase "cancel culture." Use the phrase sparingly,
-  mostly as the FAQ/objection answer; lead with the positive in the body.
+- **The positive frame is stronger than the negative.** "Repair" / "second
+  chances" / "a fair hearing" / "a way back" carries the idea without the baggage
+  of the phrase "cancel culture." Keep the phrase out of lead copy entirely
+  (research C2: partisan, toxic); if a reader raises it, answer it in the FAQ —
+  don't volunteer it.
 - **It pairs with the jury analogy's leak-fix** (see
   [`04-analogies.md`](04-analogies.md) C): every "jury/consequence" mention gets
   the restorative pairing so it never reads as a punishment machine.
@@ -58,8 +75,13 @@ people. Handle with skill, not as a culture-war flag:
   pillar's emotional payload.
 - **FAQ:** an explicit "Is this just cancel culture / a pile-on machine?" → "The
   opposite" answer (added to [`06-message-ladder.md`](06-message-ladder.md)).
-- **One-liner candidate for the pamphlet:** *"Accountability without
-  annihilation — repair before exile, and a way back."*
+- **One-liner candidates for the pamphlet** (re-expressed in our own voice — the
+  internal label never ships):
+  - *"Your members handle it, by your rules — repair, not exile."*
+  - *"A fair hearing, and a way back."*
+  - *"Fall out without falling apart."*
+  (Sharpen the winner at draft time; all three lead with our mechanic or the
+  lived experience, none use "accountability"/"annihilation"/"cancel culture".)
 
 ## Honesty guard-rail
 
