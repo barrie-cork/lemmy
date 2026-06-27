@@ -60,8 +60,8 @@ hooks:
     caution: "charged term — lead with the lived experience, not the slogan; pro-process, not a culture-war side"
   reputation_by_helping:               # themes/10
     line: "Likes don't buy you standing here. Helping does."
-    means_today: "standing earned by JURY SERVICE — volunteering to weigh cases by the community's own rules (the live v0 mechanic)"
-    means_design: "four ways of helping: judging fairly (live), reporting fairly, showing up, vouching well"
+    means_today: "standing earned by JURY SERVICE (juror_aligned +10) AND by accurate REPORTING (reporter_upheld +10) — both live v0 mechanics, verified config.rs 2026-06-27"
+    means_design: "ways of helping: judging fairly (live), reporting fairly (live), vouching/endorsement (live); 'showing up'/tenure-based gains = design"
     hard_line: "posting/liking/sharing are IRRELEVANT to standing — engagement is not reputation; severs attention->power link"
     not: [social-credit-score, influencer-clout, popularity-contest, single-number-leaderboard]
     caution: "always frame as 'earn by helping', never 'gain points'/'level up'; never show a number; today=jury participation"
@@ -97,9 +97,9 @@ moderation_flow:
     - "any member REPORTS it as breaking rule X (with reasons + evidence: quotes, context, links)"
     - "a jury is drawn to compare the content to the RULE cited, weighing evidence"
     - "jury decides by the community's thresholds"
-    - "found-against-rule -> reported person's standing DOWN; reporter MAY gain a little (customisable, upheld-reports-only, off-by-default-able — reward follows a correct rule-based report, never a vendetta)"
+    - "found-against-rule -> reported person's standing DOWN; reporter gains a little (+10 on an UPHELD report, -5 if dismissed — LIVE in v0; reward follows a correct rule-based report, never a vendetta)"
     - "sustained low standing -> smaller role (less likely called; below a floor not called / can't vote on some things)"
-  honesty: "verify report->case threshold, jury draw, reporter-reward, min-standing gate: live v0 vs design"
+  honesty: "report->case threshold, jury draw, reporter-reward (+10/-5), min-standing gate all LIVE in v0 (verified config.rs 2026-06-27). Reputation DECAY is wired but default-off."
 
 # Anchor analogies (themes/04). leak = what it gets wrong, must be named.
 analogies:
@@ -129,19 +129,19 @@ analogies:
     tier: 2
     carries: [federation-advisory, local-sovereignty]
 
-# Customisable knobs (themes/15). VERIFY which are live v0 vs design before public.
+# Customisable knobs (themes/15). Verified vs live v0 code 2026-06-27 (config.rs + reputation_snapshot.rs).
 customisation:
   line: "It's yours to tune — it bends to your community, not the other way round."
   knobs:
-    - {knob: rules, controls: "what's allowed / what breaks them", status: principle-documented}
-    - {knob: stakes, controls: "how much a violation costs standing", status: verify}
-    - {knob: reputation-decay-rate, controls: "how fast standing fades; dial DOWN to encourage engagement", status: verify}
-    - {knob: reporter-reward, controls: "small standing gain for an UPHELD report; off-by-default-able (controversial)", status: verify}
-    - {knob: jury-thresholds, controls: "agreement needed for a decision", status: verify}
-    - {knob: jury-cooldown-rest, controls: "rest period after serving (fairness of the draw)", status: verify}
-    - {knob: min-standing-to-be-called-or-vote, controls: "floor below which role shrinks", status: verify}
-    - {knob: entry-openness, controls: "vouching vs time-based balance (inclusivity valve)", status: verify}
-  honesty: "frame unconfirmed knobs as 'designed to be tunable', not 'is tunable'; repo confirms principle (sponsor-liability floor config-driven; values 'tuneable' w/ per-community override)"
+    - {knob: rules, controls: "what's allowed / what breaks them", status: live}
+    - {knob: stakes, controls: "how much a violation costs standing (sanction deltas)", status: live}      # DEFAULT_DELTAS_* config rows, per-community override
+    - {knob: reputation-decay-rate, controls: "how fast standing fades; dial DOWN to encourage engagement", status: design-default-off}  # feature.reputation_v1_decay_enabled defaults FALSE; wired but inactive in default v0
+    - {knob: reporter-reward, controls: "standing gain for an UPHELD report (+10) / loss for dismissed (-5)", status: live}  # DEFAULT_DELTAS_REPORTER_UPHELD/DISMISSED
+    - {knob: jury-thresholds, controls: "agreement needed (quorum 3 of panel 5)", status: live}            # DEFAULT_JURY_QUORUM / PANEL_SIZE
+    - {knob: jury-cooldown-rest, controls: "max concurrent assignments + age requirement", status: live}   # DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS=3, AGE_REQUIREMENT_DAYS=60
+    - {knob: min-standing-to-be-called-or-vote, controls: "floor below which role shrinks (thresholds)", status: live}  # DEFAULT_THRESHOLDS_*
+    - {knob: entry-openness, controls: "vouching vs time-based balance (inclusivity valve)", status: verify}  # endorsement live; time-based balance not yet code-confirmed
+  honesty: "most knobs are LIVE + per-community DB-overridable in v0. EXCEPTIONS to flag honestly: reputation-decay is wired but DEFAULT-OFF (say 'can be enabled', not 'standing fades'); entry-openness time-balance unconfirmed. Frame those two as 'designed to', not present tense."
 
 # Lead-adopter / on-ramp (themes/05)
 on_ramp:
@@ -166,17 +166,22 @@ forbidden:
   - utopia-overclaim            # it governs membership+moderation only
   - future-as-present-tense     # cross-protocol is vision, not shipped
 
-# Proof points (handle with care — VERIFY before publishing; themes/03)
+# Proof points (verified against research Section E, 2026-06-27)
 proof_points:
   - claim: "humans have run fair non-hierarchical rule-based societies repeatedly"
     source: "Graeber & Wengrow, The Dawn of Everything (2021)"
-    status: verify-exact-phrasing
+    status: safe-general            # solid for the general argument; do NOT cite specific archaeological facts (critics: Morris, Feinman, Bell)
+    caveat: "hedge specifics ('some scholars dispute the details'); use for the general anti-linear-history point only"
   - claim: "Brehon law ran for centuries with no state/police/prisons"
-    source: "repo 01-vision §3; Higgins 2010"
-    status: verify
-  - claim: "customary/tribal law invoked successfully in a modern court case"
-    source: "founder recollection — UNVERIFIED; find citable case (Mabo / tikanga / First Nations)"
-    status: must-verify-before-use
+    source: "Fergus Kelly (1988); Robin Chapman Stacey (1994); Biggins (2024)"
+    status: safe                    # SOLID per Section E; enforcement via suretyship (rath/naidm/aitire) + distraint (athgabal)
+  - claim: "Brehon law was bottom-up: norms -> customs -> good practice -> codified"
+    source: "Biggins (2024), History Ireland"
+    status: safe                    # SOLID per Section E; verify exact Biggins phrasing before a direct quote
+  - claim: "customary/tribal law has been invoked successfully in modern courts"
+    source: "Mabo v Queensland [1992] HCA 23 (native title); Ellis v R [2022] NZSC (tikanga); Tsilhqot'in Nation v BC [2014] SCC 44 (Aboriginal title)"
+    status: safe
+    caveat: "NONE are Brehon-specific; ALL are First Nations/Indigenous, none Irish. Cite as 'customary law holds up in court', NEVER as 'Brehon law wins in court'. No Brehon-specific modern case exists."
 
 status_honesty:
   stage: alpha

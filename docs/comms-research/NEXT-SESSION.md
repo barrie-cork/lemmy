@@ -15,6 +15,34 @@ prompt). The user is now bringing back the **Perplexity Deep Research output**.
    (372KB, immutable source). Read it — then go to Step 1. Do NOT re-fetch or
    re-run; the findings are in.
 
+## ★ Step 0.5 — THE FOUNDER DIRECTS INTERPRETATION (hard rule, 2026-06-27)
+
+**The founder wants to be actively involved in interpreting and incorporating the
+findings — this is collaborative, not delegated.** The research made "some really
+excellent points" and the founder wants to choose which ones are load-bearing and
+how they land, not have the agent silently absorb 95K of research into the themes.
+
+So the workflow is **digest → surface → founder steers → then incorporate**:
+
+1. Run the Step 1.0 fan-out to produce the digests (mechanical; no judgment calls
+   on what matters yet).
+2. **Surface the digests to the founder** — especially the strongest framing
+   points and anything that CHALLENGES a locked theme. Use the founder's running
+   "standout points" file ([`research-prompts/founder-standout-points.md`](research-prompts/founder-standout-points.md))
+   as the live list of points the founder has personally flagged as excellent.
+3. **Let the founder direct** which points to incorporate, how hard to lean on
+   each, and where. Use AskUserQuestion when an incorporation choice is genuinely
+   the founder's call (tone, emphasis, which frame leads).
+4. **Only then incorporate** — per-theme, surgically, the way the founder already
+   started doing in `themes/03-anti-tina.md` (verified court cases + "lead with
+   the living not the historical" + case-study template were founder-directed
+   edits 2026-06-27 — that is the model).
+
+Do NOT batch-rewrite all themes from the research unprompted. The founder picks
+the winners; the agent executes them faithfully. (Pairs with
+`feedback_brainstorm_log_notes_not_write.md` — surface and let the user steer
+before writing.)
+
 ## Step 1.0 — DIGEST the report first, via subagent fan-out (DO NOT read it whole)
 
 The report is **2,669 lines / 372KB (~95K tokens)**. Reading it into the main
