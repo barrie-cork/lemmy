@@ -58,24 +58,43 @@ Tech specs belong in the r/rust post and CONTRIBUTING.md, not here.
 
 ### 5. "Reputation" misreads (social-credit / clout)
 "Reputation" makes savvy readers hear **social-credit surveillance** or
-**influencer clout**. Both are the opposite of this. The fix is positive, not a
-disclaimer: standing is **earned by helping** the community govern itself, and
-**posting/liking/sharing are irrelevant to it** — engagement is not reputation.
-Lead with "trust you earn by helping", never "your score." Full theme:
-[`10-reputation-is-earned-by-helping.md`](10-reputation-is-earned-by-helping.md).
+**influencer clout**. Both are the opposite of this. The fix is two-part:
+- **Positive, in our own mechanic:** standing is **earned by helping** the
+  community govern itself (serving on juries, reporting honestly) — and
+  **posting/liking/sharing are irrelevant** to it. Lead with "trust you earn by
+  helping," never "your score."
+- **Pre-empt the fear out loud** (research C/G — don't wait for it): name *Black
+  Mirror "Nosedive"* and kill it — "no number on your profile, no compliance
+  score, can't be farmed by posting." Up front wherever standing leads, not a
+  buried FAQ. Full theme:
+  [`10-reputation-is-earned-by-helping.md`](10-reputation-is-earned-by-helping.md).
 
-### 6. Punitive misread ("is this cancel culture?")
-Any mention of juries/consequences risks reading as a punishment machine. Pair
-every such mention with the restorative outcome — repair before exile, a way
-back. "Accountability without annihilation." Full theme:
+### 6. Punitive misread (reads as a punishment machine)
+Any mention of juries/consequences risks reading as a "destroy people" machine.
+Pair every such mention with the restorative outcome, in our own mechanic — your
+members decide it by your rules, repair before exile, a way back. Two locked
+rules: **don't use the phrase "cancel culture" in lead copy** (it's partisan —
+describe the experience), and **"accountability without annihilation" is an
+internal label, never public copy**. Full theme:
 [`09-anti-cancel-culture.md`](09-anti-cancel-culture.md).
 
-### 7. Blockchain confusion
+### 7. Blockchain / crypto confusion
 The repo is explicit: **no tokens, no on-chain voting, blockchain is a
 maybe-someday narrow audit anchor (V3).** If "blockchain" appears anywhere near
 the lead, readers will assume crypto and either bounce (FOSS/left organisers
-allergic to it) or arrive with wrong expectations (crypto crowd). **Keep it out
-of public copy entirely** unless a technical reader specifically asks.
+allergic to it) or arrive with wrong expectations (crypto crowd).
+
+Research C/G is firm that the FOSS-crypto contagion is real (Mozilla, Wikimedia,
+Brave fallout) and the fix is **active pre-emption, not just omission** — the
+crowd that fears it is exactly ours, so name it and deny it in our own terms:
+
+> **There's no blockchain, no token, no coin — nothing to buy, sell, or
+> speculate on.** When we say it's decentralised, we mean it works like *email*:
+> independent communities that can talk to each other, no central owner — a
+> proven idea that predates crypto by decades.
+
+Lead the "decentralised/federated" explanation with the email/post analogy so
+"crypto" never gets a foothold. Put this denial up front, not buried in an FAQ.
 
 ## The honesty line (status)
 
@@ -85,6 +104,14 @@ governance not all live, cross-protocol is direction not shipped. Copy should
 Use "designed to", "will", "the goal is" for unshipped reach. A founder who's
 honest about alpha status earns more trust with this audience than one who
 oversells — these readers can smell vaporware.
+
+**The honesty is a *credibility asset*, not damage control** (research C — the
+pratfall effect + "no vested interest"). A solo dev with open code, volunteering
+the catch first ("this is early; here's what it doesn't do yet"), reads as *more*
+trustworthy to anti-corporate organisers than any polished vendor pitch — they're
+already hunting for the catch, so name it first. Show your working: link the open
+code, the public reasoning, the governance docs. Replace superlatives with
+specifics. Let the small true claim feel big.
 
 ## Tone target (one line)
 

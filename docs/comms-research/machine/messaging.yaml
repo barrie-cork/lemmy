@@ -168,10 +168,18 @@ forbidden:
   - blockchain-in-lead          # misleads as crypto; it's a maybe-someday V3 audit anchor
   - tokens-or-onchain-voting    # opposite of the project
   - social-credit-score-framing
+  - cancel-culture-phrase-in-lead   # partisan/toxic (research C2) — describe the experience instead
+  - accountability-without-annihilation-in-public   # internal strategy label only
   - celtic-mysticism-romance
   - lemmy-fork-as-headline      # that's how, not what
   - utopia-overclaim            # it governs membership+moderation only
-  - future-as-present-tense     # cross-protocol is vision, not shipped
+  - future-as-present-tense     # cross-protocol + reputation-decay (default-off) are vision, not shipped
+
+# Pre-empt these misreads OUT LOUD, up front (research C/G) — name and kill, don't bury in FAQ
+preempt:
+  social_credit: "this isn't Black Mirror Nosedive — no number, no compliance score, can't be farmed by posting; just whether your community trusts you to help run things"
+  crypto: "no blockchain, no token, no coin, nothing to buy/sell/speculate on; 'decentralised' = works like email (independent communities, no central owner) — predates crypto by decades"
+  honesty_as_asset: "volunteer the alpha catch first (pratfall effect, research C); solo dev + open code + 'here's what it can't do yet' reads MORE trustworthy to anti-corporate organisers, not less"
 
 # Proof points (verified against research Section E, 2026-06-27)
 proof_points:
