@@ -6,19 +6,26 @@ and only climb if they want more. Each rung is self-contained. These are
 evidence) — but they show the shape and prove the themes hold together.
 
 > Honesty note: these use present-tense benefit language. Before publishing,
-> apply the status guard-rail ([`07-traps-and-tone.md`](07-traps-and-tone.md)) —
-> cross-protocol reach is "designed to", not "does".
+> apply the status guard-rail ([`07-traps-and-tone.md`](07-traps-and-tone.md)).
+> Two things are "designed to", NOT "does", in v0: **cross-protocol reach** (only
+> Lemmy is wired) and **reputation decay** (built but off by default). Live in v0:
+> juries, accurate-reporting reward, vouching, community-set stakes/thresholds.
 
 ## Rung 0 — 7 words (logo-line / tab title)
-> **Fair self-government for any online community.**
+> **Run your group your own way — fairly, together.**
 
-Alt, warmer:
-> **Run your group fairly — together.**
+Alt, with the lead image:
+> **A community jury for your group, not a boss.**
+
+*(Greeting verb softened from "govern/self-government" per the naming decision —
+[`02-what-is-it.md`](02-what-is-it.md). Lead with "run" + the jury image; "govern"
+is a deeper-copy word. Both rung-0 lines are A/B-test candidates, not locked.)*
 
 ## Rung 1 — one sentence (social bio / hero subhead)
-> **Brehon Consensus is an open, fair way for any group to govern itself —
-> deciding together who belongs and how to put things right, in the open, with
-> repair instead of punishment.**
+> **Brehon Consensus is an open, fair way for any group to run itself — your
+> members write the rules, and your members (like a jury, not a boss) decide
+> fairly when someone breaks them, in the open, aiming to repair rather than
+> punish.**
 
 ## Rung 2 — one paragraph (elevator / Mastodon post / "what is this")
 > Most online communities run on the same broken deal: a few admins make the
@@ -34,6 +41,10 @@ Alt, warmer:
 
 **Headline:** *There are lots of ways to run a community fairly. Here's one you
 can actually use.*
+
+*(Hero line for the front, from the naming decision: "Run your group your own way
+— with a community jury, not a boss." Lead with the felt power-contrast + the
+jury image before any category noun — research D.)*
 
 1. **The problem you know too well.**
    (3–4 lines naming the lonely, unfair mess of group admin — bots and spam,
@@ -55,14 +66,16 @@ can actually use.*
    - **You decide together, in the open.** A reported post is checked against the
      **rule** (not a feeling) by a drawn panel of members. (juries, transparency,
      rules-not-feelings)
-   - **You repair, you don't just punish.** The opposite of a pile-on:
-     accountability without annihilation, with an appeal and a way back.
-     (restorative, inclusive, reintegration; anti-cancel-culture)
+   - **You repair, you don't just punish.** The opposite of a pile-on: your
+     members handle it by your rules, with an appeal and a way back. (restorative,
+     inclusive, reintegration. NB: "accountability without annihilation" is an
+     internal label — don't print it; the phrase "cancel culture" stays out too.)
 
 4. **And standing is earned by helping — not by clout.**
-   You build trust by helping the community govern itself (today: serving fairly
-   on a panel), never by posting, liking, or being popular. It can't be gamed.
-   (theme 10 — strong, surprising, very "us")
+   You build trust by helping the community run itself — today by **serving fairly
+   on a jury** and by **reporting real problems honestly** (both live) — never by
+   posting, liking, or being popular. It can't be gamed. (theme 10 — strong,
+   surprising, very "us")
 
 5. **No one burns out, because everyone moderates a little.**
    No moderator class. The work is shared like jury duty — randomly drawn, with a
@@ -84,8 +97,10 @@ can actually use.*
    you already use — Lemmy today, more to come. "Designed to.")
 
 9. **It's yours — and yours to tune.** Open source, no company owns it, no tokens,
-   no surveillance scores. And you can tune how it runs (even how fast standing
-   fades, if you want to keep it welcoming). ([`15-yours-to-tune.md`](15-yours-to-tune.md))
+   no surveillance scores. And you can tune how it runs — the rules, the stakes,
+   the jury thresholds (all live). *(Standing-decay is designed-in but off by
+   default — frame as "you can switch on standing that fades over time", not "it
+   fades".)* ([`15-yours-to-tune.md`](15-yours-to-tune.md))
 
 10. **Where it's at + how to follow / try.** (honest alpha status; one link.
     Low-stakes groups — a garden club, a residents' group — are the perfect place
@@ -95,14 +110,17 @@ can actually use.*
 
 - *"Is this crypto / blockchain?"* → No. No tokens, no on-chain voting, never
   "more money = more power." (See traps file.)
-- *"Is it a surveillance / social-credit score?"* → No — the opposite. Standing is
-  **earned by helping** the community (vouching, fair reporting, serving on panels,
-  showing up), shows abilities not a number, and fades over time. It rewards being
-  useful to others, not obeying a watcher. (See `10-reputation-is-earned-by-helping.md`.)
-- *"Isn't this just cancel culture / a pile-on machine?"* → The opposite.
-  Responses start gentle and escalate only if needed (a note, then reduced reach,
-  then a pause; bans last). A fair panel decides — not a mob — with a guaranteed
-  appeal and a way back. Accountability without annihilation. (See
+- *"Is it a surveillance / social-credit score?"* → No — this isn't *Black Mirror
+  "Nosedive."* There's no number on your profile, nobody scores you for
+  compliance, and you can't farm it by posting. Standing is just whether your
+  community trusts you to help run things — **earned by helping** (serving on a
+  jury, reporting honestly, vouching well), shown as abilities not a score. It
+  rewards being useful to others, not obeying a watcher. (See
+  `10-reputation-is-earned-by-helping.md`.)
+- *"Isn't this just a pile-on machine?"* → The opposite. Responses start gentle
+  and escalate only if needed (a note, then reduced reach, then a pause; bans
+  last). Your own members decide — by your rules, not a mob — with a guaranteed
+  appeal and a way back. Repair first, exile last. (See
   `09-anti-cancel-culture.md`.)
 - *"Isn't vouching just gatekeeping?"* → There's a time-based way in too. And
   vouching is what makes it resistant to fake accounts and brigading.
@@ -120,8 +138,9 @@ can actually use.*
   against rules the group itself adopted. If something bothers you but no rule
   covers it, you propose a rule — you don't report a feeling. (See `14-bottom-up.md`.)
 - *"Is it one-size-fits-all?"* → No. It's yours to tune — the rules, the stakes,
-  even how fast standing fades. A relaxed garden club and a high-trust activist
-  cell can run it very differently. (See `15-yours-to-tune.md`.)
+  the jury thresholds (and you can switch on standing that fades over time, if you
+  want). A relaxed garden club and a high-trust activist cell can run it very
+  differently. (See `15-yours-to-tune.md`.)
 - *"Do I have to leave Lemmy / Matrix / my current tool?"* → No — it's built to
   work *with* open tools, not replace them.
 - *"Is this just for activists / lefties?"* → It's for any group that wants to be
@@ -134,8 +153,9 @@ can actually use.*
 ## Notes for the copywriter
 
 - The ladder must stay *consistent*: same three pillars (Make/Decide/Repair),
-  same two jobs (Membership/Mediation), same analogies at every rung. A reader
-  climbing from bio → page should feel "yes, more of the same idea," never a
-  switch.
+  same two jobs (Membership/Mediation), same lead image (**community jury, not a
+  boss**) and same analogies at every rung. A reader climbing from bio → page
+  should feel "yes, more of the same idea," never a switch. The greeting verb is
+  **"run your group"** throughout; "govern" only appears in deeper/press copy.
 - Rung 3 is the leaflet. Rungs 0–2 are the website hero + social. Rung 4 is the
   site FAQ. One coherent system, five surfaces.
