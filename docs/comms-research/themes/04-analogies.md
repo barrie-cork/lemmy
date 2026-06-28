@@ -82,7 +82,7 @@ trade-off and the failure mode of each.
 | Tempting analogy | Why it backfires |
 |---|---|
 | **Blockchain / DAO / crypto-governance** | Imports tokens, speculation, "more money = more power" — the *exact opposite* of the project. Hard no. |
-| **Social credit score** | Authoritarian surveillance connotation. Reputation here is opt-in, earned, capability-based, decaying — say so by contrast. |
+| **Social credit score** | Authoritarian surveillance connotation. Reputation here is earned, capability-based, no single number — say so by contrast, and name the *Black Mirror "Nosedive"* fear to kill it. (Note: decay is *designed-to*, off by default in v0 — don't lean on "decaying" as a present-tense contrast.) |
 | **Supreme court / legal system** | Too heavy, too punitive, implies lawyers and permanent judges. We have *temporary peer juries*, not a judiciary. |
 | **Wikipedia moderation** | Real but ambivalent reputation (edit wars, cabals) — a contested example, invites argument. |
 | **"Reddit but nicer"** | Undersells to a feature tweak; hides that it's a governance layer, not a forum. |
@@ -100,3 +100,24 @@ trade-off and the failure mode of each.
 > references→trust, jury→fairness), supporting analogies only when a specific
 > mechanic needs unlocking. Don't stack five metaphors in one paragraph — that's
 > noise, not clarity.
+
+## Two research-backed craft rules (Section A)
+
+1. **Use at least two analogies from different surface domains for the *core*
+   idea** — not one. A single analogy transfers spontaneously only ~30% of the
+   time; naming it explicitly raises that to ~76%, and a *second* structurally
+   similar analogy from a different domain is what makes the reader extract the
+   underlying principle rather than just the story (Gick & Holyoak). So the
+   self-government idea should land via *both* "email" (it travels) *and* "jury"
+   (it's fair) — two anchors, one schema. (The jury analogy now also doubles as
+   the lead category noun — see [`02-what-is-it.md`](02-what-is-it.md) — so it
+   carries extra weight; keep "email" beside it so the *portable* half isn't lost.)
+
+2. **Concrete vignette before the abstract benefit** (Rawson: +40% when the vivid
+   example leads). Open each rung/section with a 2-line scene, *then* the
+   definition — not the reverse. See [`06-message-ladder.md`](06-message-ladder.md).
+
+> Process note (the curse of knowledge, Section A): the only reliable test of an
+> analogy is a *cold reader* — someone from the [`05`](05-audience-grassroots.md)
+> audience who hasn't read these themes. Test the lead analogies on 3–5 real
+> organisers before print; we cannot self-assess comprehension reliably.

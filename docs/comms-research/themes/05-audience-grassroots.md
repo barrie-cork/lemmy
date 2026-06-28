@@ -35,6 +35,12 @@ small low-stakes communities trying their own rule-sets **is the alternative in
 action.** Lead-adopter copy should feel **welcoming and low-barrier**, not
 militant.
 
+> Method note (founder, 2026-06-27): the *themes* stay audience-neutral — they
+> describe what the layer brings ("your members, your rules, repair"). The
+> **per-group spins** — a chess club, a gardening group, neighbours, an activist
+> collective — are *drafting* work and live in `drafts/`, not in the themes. This
+> file is the single source of audience truth; the spins all trace back to it.
+
 ## What keeps them up at night (their problems, their words)
 
 - "Why is it always the same few people making all the decisions?"
