@@ -50,11 +50,17 @@ practice before they were written down. See
 
 2. **Protocol-agnostic governance.** Brehon Consensus is **not** "a Lemmy fork"
    in the marketing. Lemmy is just the *first* host. The real thing is a
-   **portable layer of fair self-government** designed to plug into any
-   open-source app or protocol — Lemmy (Reddit-style), Matrix (chat), PeerTube
-   (YouTube-style), MeshCore (mesh networking), and more. It complements those
+   **portable layer of fair self-government** designed to plug into open-source
+   apps and protocols. Today it runs natively on **Lemmy** (Reddit-style); it is
+   **designed to plug into PeerTube** (YouTube-style, the next target) and
+   **Matrix chat** (in community-governed, non-encrypted rooms — end-to-end-
+   encrypted rooms are out of scope for evidence-gathering). It complements those
    protocols the way a constitution complements a town: they move the messages;
    it decides, fairly and transparently, who belongs and what's allowed.
+   (Honesty note: integration claims are gated to what the feasibility research
+   supports — `docs/research/brehon-app-plane-feasibility-INDEX.md`. Forums like
+   Discourse and NodeBB are documented future planes; serverless / end-to-end-
+   encrypted P2P apps cannot be governed this way and are not claimed.)
 
 ## The sharp hooks (the lines that make organisers lean in)
 

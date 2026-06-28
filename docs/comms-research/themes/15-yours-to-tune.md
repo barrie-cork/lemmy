@@ -24,7 +24,7 @@ can override today; **design** = built but off/unwired in v0.
 
 | Knob | What it controls | Status |
 |---|---|---|
-| **The rules** | what's allowed / what breaks them | LIVE — the foundation; bottom-up, by consent ([`14`](14-bottom-up.md)) |
+| **The rules** | what's allowed / what breaks them | LIVE (mechanism) — versioned, hash-stamped, immutable once set; **design** for the member propose-and-consent path (mod/admin-authored in v0) ([`14`](14-bottom-up.md)) |
 | **The stakes** | how much a violation costs your standing | LIVE — `DEFAULT_DELTAS_*` config rows, per-community ([`10`](10-reputation-is-earned-by-helping.md)) |
 | **Reputation decay rate** | how fast standing fades over time | **design, default-OFF** — `feature.reputation_v1_decay_enabled`=false. Frame as "switch on standing that fades", not "fades" — see below |
 | **Reporter reward** | whether a successful reporter gains a little standing | LIVE — `reporter_upheld` +10 / dismissed −5; upheld-only ([`13`](13-the-moderation-journey.md)) |

@@ -29,10 +29,10 @@ This is the real backbone for everything the product claims about
 self-governance: it's not a novel invention, it's a **recovered way of making
 rules** that actually functioned for centuries.
 
-## How it maps onto the product (the same loop, today)
+## How it maps onto the product (the loop it's designed to run)
 
-The corrected moderation flow ([`13`](13-the-moderation-journey.md)) *is* the
-bottom-up loop running in software:
+The corrected moderation flow ([`13`](13-the-moderation-journey.md)) is the
+bottom-up loop the system is **designed to** run:
 
 ```
 a felt need  →  someone proposes a rule  →  members decide by consent
@@ -40,9 +40,18 @@ a felt need  →  someone proposes a rule  →  members decide by consent
             →  cases are judged against it
 ```
 
-Rules grow **from** the community, not **onto** it. You can only be sanctioned
-against norms the members themselves raised and agreed. That's what makes the
-rules *legitimate* rather than imposed.
+Rules grow **from** the community, not **onto** it: the goal is that you can only
+be sanctioned against norms the members themselves raised and agreed — that's what
+makes the rules *legitimate* rather than imposed.
+
+> **Built vs designed (honesty note, v0).** Today rules are *versioned,
+> hash-stamped and immutable once set* (so a case is always judged against the
+> rule that was in force), and the system *shows the blast radius* of a rule or
+> setting change before anyone commits it. Those parts are live. The
+> **member-facing propose-and-decide-by-consent surface is designed, not yet
+> shipped** — in v0, rule changes are made by the community's moderators/admins
+> and recorded in a public, signed audit trail. The loop above is the direction
+> of travel, not a button that exists today.
 
 ## Consensus method is itself bottom-up (experimentation)
 
