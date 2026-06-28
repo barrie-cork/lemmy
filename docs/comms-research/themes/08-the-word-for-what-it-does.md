@@ -25,6 +25,17 @@ So the locked hierarchy is:
 - **Spirit/contrast:** moderation → *mediation* (the reveal that it's not punitive)
 - **Abstract umbrella:** *self-governance* (press, category, "what shelf")
 
+**Research updates (2026-06-27), fully compatible with the above:**
+- ✅ Confirmed: "governance" alienates as the greeting (FrameWorks); the
+  moderation→mediation pivot is right (modelled by Loomio, RJC).
+- **Greeting verb softened:** at the *thing-level* (file 02) the greeting verb
+  moved from "govern yourselves" to **"run your group / run things your way"** —
+  same softening applies here; don't open with "govern."
+- **"Jury" promoted** (file 02): the *decide* job is now named with the
+  research-backed **community jury** image, with the reframe "verdict = a fair
+  collective decision by peers, not a courtroom." So the *Mediation* job's
+  concrete face in copy is the community jury.
+
 Everything below is the reasoning that led here; keep for the copywriter.
 
 ## The resolution: layer them by audience depth (same pattern as file 02)

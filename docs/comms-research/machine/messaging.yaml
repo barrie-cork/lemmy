@@ -15,7 +15,9 @@ framing:
   two_jobs: "Membership & Mediation"
   pillars: [make, decide, repair]            # You make rules / decide together / repair not punish
   umbrella_noun: governance                  # abstract level only; never the greeting
-  greeting_verb: "govern yourselves"         # lead with the verb, not a category noun
+  greeting_verb: "run your group / run things your own way"  # softened from 'govern yourselves' (FrameWorks: 'govern' alienates non-tech readers); 'govern' returns one level down
+  greeting_noun: "a community jury for your group"  # promoted 2026-06-27 (CHI: jury tests fairer than moderation across spectrum); reframe verdict = fair peer decision, not courtroom; names the DECIDE job only — copy must still carry membership+rule-making
+  greeting_noun_testing: "A/B-test 'community jury' + 'run your group fairly' on real organisers before print — first label dominates comprehension permanently (Moreau 2001)"
   master_spine: "Bottom-up, not top-down — at every layer"  # themes/14; THE spine (founder decision 2026-06-27)
   spine_why: "You don't need a tech company to run your community fairly. You never did."  # SP-1 reframe: it's a choice not a natural law; plain public line, not 'ideology'
   spine_how: "Bottom-up at every layer — rules/moderation/standing/power all flow UP from the membership"  # the mechanism that proves the WHY
@@ -23,15 +25,16 @@ framing:
   brehon_role: "evidence alternatives exist, not heritage romance; bottom-up rule-making (norms->customs->good-practice->codified)"
   ideology_framing_tone: "OPEN founder call — plain/empowering line is public lead; 'manufactured common sense / ideological imposition' is deep-copy only. Revisit at about-page draft."
   category_by_depth:                          # which noun for which reader (themes/02)
-    organiser: "a fair way for your group to govern itself"
-    curious_press: "an open governance layer for online communities"
+    organiser: "run your group your own way — with a community jury, not a boss"
+    curious_press: "an open self-governance layer for online communities"
     technical: "a portable open-source governance layer / emerging standard"
 
 # Core lines at each rung (themes/06)
 ladder:
   rung0_7word:
-    primary: "Fair self-government for any online community."
-    warm: "Run your group fairly — together."
+    primary: "Run your group your own way — fairly, together."
+    warm: "A community jury for your group, not a boss."
+    note: "softened from 'Fair self-government…' per the greeting-verb shift (themes/02); both lead with 'run' + the jury image, not 'govern'"
   rung1_sentence: >
     Brehon Consensus is an open, fair way for any group to govern itself —
     deciding together who belongs and how to put things right, in the open,
