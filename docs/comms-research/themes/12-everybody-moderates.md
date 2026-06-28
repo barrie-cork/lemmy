@@ -56,9 +56,13 @@ The design goal stated plainly: **make it as fair as possible** — both fair in
 with rest). This is the mechanism that makes the "everybody, a little" promise
 real rather than aspirational.
 
-> Honesty: confirm the random-draw + cooldown/rest mechanics are live in v0 vs.
-> designed before stating specifics publicly (the *principle* is core; the
-> *parameters* — pool eligibility, rest period length — need a code check).
+> Honesty: ✅ verified live in v0 (config.rs + admin_assign_jury.rs, 2026-06-27).
+> Jurors are drawn by SQL `ORDER BY random()` (genuinely random, re-rolled each
+> case), and the cooldown/rest is real (`jury.constraints.juror_cooldown_days`,
+> default 7) — both safe to state present-tense. Bonus: the draw is also
+> *diversity-aware* (a 3-phase filter that re-rolls if one sponsor-cluster would
+> dominate a panel), so "random, not a clique" is literally enforced, not just
+> aspirational.
 
 ## What this delivers (the benefits to spell out)
 
@@ -91,7 +95,7 @@ real rather than aspirational.
 - **Don't imply zero effort.** It's *shared* effort, not *no* effort — serving on
   a panel means actually reading the case and deciding in good faith. The promise
   is "a fair, light, shared turn," not "moderation does itself."
-- **v0 status:** confirm the jury-draw / eligibility-pool mechanics that make this
-  real are live vs. designed before stating specifics
-  (see [`../source-notes/repo-essence-extract.md`](../source-notes/repo-essence-extract.md)
-  honesty note). The *principle* is core and documented; the *dials* need a check.
+- **v0 status:** ✅ the jury-draw + eligibility-pool + cooldown mechanics are
+  **live in v0** (verified 2026-06-27) — random selection, a 7-day default rest,
+  and concurrent-assignment caps all real and tunable. The "everybody, a little"
+  promise rests on shipped code, not just design.

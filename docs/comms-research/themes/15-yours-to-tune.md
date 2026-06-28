@@ -19,20 +19,25 @@ This is the practical face of "bottom-up" ([`14`](14-bottom-up.md)) and "consent
 
 Everything founder has flagged as customisable, in one place:
 
-| Knob | What it controls | Notes |
+Status verified against config.rs 2026-06-27. **LIVE** = a config row a community
+can override today; **design** = built but off/unwired in v0.
+
+| Knob | What it controls | Status |
 |---|---|---|
-| **The rules** | what's allowed / what breaks them | the foundation; bottom-up, by consent ([`14`](14-bottom-up.md)) |
-| **The stakes** | how much a violation costs your standing | community sets it, all consent ([`10`](10-reputation-is-earned-by-helping.md)) |
-| **Reputation decay rate** | how fast standing fades over time | **tune it down to encourage engagement** — see below |
-| **Reporter reward** | whether a successful reporter gains a little standing | controversial → off-by-default-able, upheld-reports-only ([`13`](13-the-moderation-journey.md)) |
-| **Jury thresholds** | how much agreement a decision needs | *(verify live vs design)* |
-| **Jury cooldown / rest** | how long after serving before you're called again | the fairness-of-the-draw dial ([`12`](12-everybody-moderates.md)) |
-| **Minimum standing to be called / to vote** | the floor below which your role shrinks | *(verify live vs design)* |
-| **Openness of entry** | how much to rely on vouching vs. time-based entry | the inclusivity valve ([`11`](11-invitation-as-defence.md)) |
+| **The rules** | what's allowed / what breaks them | LIVE — the foundation; bottom-up, by consent ([`14`](14-bottom-up.md)) |
+| **The stakes** | how much a violation costs your standing | LIVE — `DEFAULT_DELTAS_*` config rows, per-community ([`10`](10-reputation-is-earned-by-helping.md)) |
+| **Reputation decay rate** | how fast standing fades over time | **design, default-OFF** — `feature.reputation_v1_decay_enabled`=false. Frame as "switch on standing that fades", not "fades" — see below |
+| **Reporter reward** | whether a successful reporter gains a little standing | LIVE — `reporter_upheld` +10 / dismissed −5; upheld-only ([`13`](13-the-moderation-journey.md)) |
+| **Jury thresholds** | how much agreement a decision needs | LIVE — `jury.quorum` (3 of panel 5) |
+| **Jury cooldown / rest** | how long after serving before you're called again | LIVE — `jury.constraints.juror_cooldown_days` (default 7) ([`12`](12-everybody-moderates.md)) |
+| **Minimum standing to be called / to vote** | the floor below which your role shrinks | LIVE — `DEFAULT_THRESHOLDS_*` (jury-reliability 50, etc.) |
+| **Openness of entry** | vouching vs. time-based / provisional entry | LIVE — `MembershipState` (member/provisional), `onboarding.*` account-age rows ([`11`](11-invitation-as-defence.md)) |
 
 ## The decay example (founder's own)
 
-Reputation **decays over time** — but *how fast* is tunable. A community that
+Reputation **can be set to decay over time** — the mechanic is built, though it
+ships **off by default** in v0 (so frame it as "you can switch on standing that
+fades", not "standing fades"). Once on, *how fast* is tunable. A community that
 **wants more people engaging** can **dial the decay down**, so members don't feel
 they're constantly at risk of losing standing. The logic:
 
@@ -54,13 +59,15 @@ differently, because each sets it for itself.
   try a configuration, see how it feels, and adjust. (*Dawn of Everything*
   experimentation, [`03`](03-anti-tina.md) / [`14`](14-bottom-up.md).)
 
-## Honesty guard-rail (load-bearing — read before any public copy)
+## Honesty guard-rail (load-bearing) — RESOLVED 2026-06-27
 
-"**Customisable**" is becoming a heavily-leaned-on promise. Before the pamphlet
-says "your community can tune X," **verify against the repo which knobs are
-actually config-driven in v0 vs. designed-for-later.** The docs confirm the
-*principle* is real (e.g. the sponsor-liability floor is config-driven; values
-are documented as "tuneable" with "per-community override"), but the *full knob
-list above is not all confirmed live.* Frame unconfirmed knobs as "designed to be
-tunable," not "is tunable," until checked. A wrong customisation claim is an easy
-credibility loss.
+Verified against `config.rs`: **the knob list above is real.** Seven of the eight
+knobs are LIVE config rows a community can override today (rules, stakes, reporter
+reward, jury thresholds, jury cooldown, minimum-standing floors, entry openness via
+membership-state + account-age). So "customisable" is a *safe present-tense*
+promise for those.
+
+**The single exception:** reputation **decay** is built but **off by default**
+(`feature.reputation_v1_decay_enabled`=false). Say "you can switch on standing
+that fades," never "standing fades over time." That one line is the difference
+between an honest promise and an overclaim.

@@ -69,10 +69,11 @@ RULES — not against whether someone is offended.**
 
 ## Honesty guard-rails
 
-- Confirm against the repo which parts are **live v0 vs. design**: report→case
-  threshold, jury draw, the reporter-reward on reporting-accuracy, the
-  minimum-standing-to-be-called gate. The *flow* matches the documented case
-  lifecycle; the *exact dials* and the reporter-reward need a code check before
-  public specifics.
+- ✅ Verified live in v0 (2026-06-27): the full flow is shipped — random jury
+  draw (`ORDER BY random()`), reporter-reward on reporting-accuracy
+  (`reporter_upheld` +10 / dismissed −5), the minimum-standing gates
+  (`DEFAULT_THRESHOLDS_*`), and the community-set decision threshold
+  (`jury.quorum`). All safe to state present-tense. (The only governance knob
+  that's design-not-default is reputation *decay* — irrelevant to this flow.)
 - Don't imply the jury judges *people* — it judges **content against a rule.**
   Keep that distinction crisp; it's what separates this from a popularity trial.

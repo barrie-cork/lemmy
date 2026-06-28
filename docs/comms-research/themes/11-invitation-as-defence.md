@@ -78,7 +78,10 @@ opposite of "inclusive," one of our six core words. Always pair the defence with
 the openness valve:
 
 - **There's a time-based way in too** — you don't *need* a sponsor; you can also
-  earn your way in over time with clean conduct (repo 01-vision §5.1 Option B).
+  earn your way in over time with clean conduct. ✅ Live in v0 (verified
+  2026-06-27): a `MembershipState` of `provisional` plus account-age thresholds
+  (`onboarding.sponsor_min_account_age_days` 30, `provisional_membership_cooldown_days`
+  14) is the shipped time-based path — not just design.
 - **It's not about keeping people out** — it's about keeping *bad-faith floods*
   out, so genuine newcomers land in a community that isn't already on fire.
 - **The community sets its own openness** — a group can be more or less open
