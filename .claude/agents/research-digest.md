@@ -56,18 +56,35 @@ Write to the output path. The index MUST contain these sections, in order:
 
 ### Step 4 — self-verify before finishing (MANDATORY — do not skip)
 
-The line citations are the part most likely to be wrong, so prove a sample right:
+Two things can be wrong: a line citation (points at the wrong place) or a named entity (invented — a model/version/tool/score the source never states). Prove a sample of each right.
+
+**Check 4a — line citations land where you claim:**
 
 ```
 # spot-check that cited lines land on the headings you claimed
 for ln in <pick 5-6 line numbers you cited>; do printf "L%s: " "$ln"; sed -n "${ln}p" <source>; done
 ```
 
-Each printed line must match the heading text you attributed to it. If ANY is off, your offsets drifted — re-derive from the `grep -nE '^#{1,4} '` output and rewrite the affected cites. Then confirm the **written output file's** size, measured AFTER your final Write — run `wc -l -c <output-path>` on the file on disk, not on draft content held in your head (an earlier draft's line count is not the deliverable's line count). Confirm it is under 250 lines and fewer lines than the source (and ≤⅓ source only if the source exceeds ~600 lines). The numbers you report to the caller MUST come from this post-write `wc`, not an estimate. Only finish once the line-citation spot-check AND the on-disk size check both pass.
+Each printed line must match the heading text you attributed to it. If ANY is off, your offsets drifted — re-derive from the `grep -nE '^#{1,4} '` output and rewrite the affected cites.
+
+**Check 4b — named entities actually exist in the source (NEW — invented entities are the second failure mode):**
+
+The digest's load-bearing nouns — model names, version numbers, sizes, product/tool names, exact scores/verdicts — must each appear in the source. A `grep` returning 0 hits is proof you invented it.
+
+```
+# grep-back every proper-noun/version/number the digest asserts as fact
+for term in <list 6-10 load-bearing entities you wrote: "Phi-4 Mini" "3.8B" "RustDesk" "all-MiniLM-L6-v2" ...>; do
+  printf "%-22s : " "$term"; grep -ic "$term" <source>
+done
+```
+
+Any term with `0` hits is **invented** — remove it or replace it with the source's actual wording (re-grep a synonym to find what the source really says). Do NOT guess a "close enough" value; the source's exact term is the only acceptable one. Pick the entities that would most mislead a reader if wrong (a wrong model size or a fabricated tool name is worse than a reworded description). If the digest asserts no specific named entities (rare), note that and skip 4b.
+
+If ANY 4a or 4b check fails, fix the affected lines and re-run that check before proceeding. Then confirm the **written output file's** size, measured AFTER your final Write — run `wc -l -c <output-path>` on the file on disk, not on draft content held in your head (an earlier draft's line count is not the deliverable's line count). Confirm it is under 250 lines and fewer lines than the source (and ≤⅓ source only if the source exceeds ~600 lines). The numbers you report to the caller MUST come from this post-write `wc`, not an estimate. Only finish once the line-citation spot-check (4a), the named-entity grep-back (4b), AND the on-disk size check all pass.
 
 ## Final report to the caller (keep under ~200 words)
 
-Report: (1) the index path, (2) the index line count vs source line count (proof it shrank), (3) the headline finding(s) — e.g. the ranked list with verdicts, or the top conclusion — and (4) one line confirming you self-verified the line citations. Do NOT recap the index body; the caller will open it if they want detail. If you hit anything that blocked faithful indexing (missing source, no master table, ambiguous ratings), say so plainly.
+Report: (1) the index path, (2) the index line count vs source line count (proof it shrank), (3) the headline finding(s) — e.g. the ranked list with verdicts, or the top conclusion — and (4) one line confirming both self-verify checks passed — line citations (4a) AND the named-entity grep-back (4b), stating how many entities you grep-confirmed against the source. Do NOT recap the index body; the caller will open it if they want detail. If you hit anything that blocked faithful indexing (missing source, no master table, ambiguous ratings), say so plainly.
 
 ## Why this role exists
 
