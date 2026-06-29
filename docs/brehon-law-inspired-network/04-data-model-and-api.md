@@ -1,7 +1,7 @@
 # 04 — Data Model & API
 
 **Audience:** Backend engineers (daily-driver reference)
-**Status:** LIVING — current as of `governance-v0` @ `644ce42d6` (2026-05-29); reflects the v0 base + all merged v1 schema through the federation-inbound lane (`2026-05-17` migration, shipped 2026-05-18). Derived from live code (`migrations/` + `crates/`), not design intent. Remaining v1 lanes (RT-r4/r5, quality-r2, federation-inbound-c onward) update this doc as they ship.
+**Status:** LIVING — current as of `governance-v0` @ `13fc130` (2026-06-29); reflects the v0 base + all merged v1 schema through the federation-inbound lane + m2-messaging (`governance_messaging_config`). Derived from live code (`migrations/` + `crates/`), not design intent. Remaining lanes (m2-late-b-actor onward) update this doc as they ship.
 **Source of truth:** the `migrations/` DDL + `crates/db_schema/src/source/governance/*.rs` Diesel models + `crates/db_schema_file/src/enums.rs` enum defs + the route registration in `crates/api/routes/src/lib.rs` are authoritative; this doc is their readable synthesis. **On any discrepancy, CODE WINS — fix the doc.**
 
 This is the implementation reference. It holds migrations, tables, enums, Diesel structs, view structs, request/response DTOs, the REST route table, handler responsibilities, the jury-vote aggregation lifecycle, and the federation surface. Concepts and lifecycles live in [02-domain-model.md](02-domain-model.md). Architecture and crate layout live in [03-architecture.md](03-architecture.md). ADRs and open questions live in [99-decisions-and-open-questions.md](99-decisions-and-open-questions.md).
@@ -134,7 +134,9 @@ All governance enums live in `crates/db_schema_file/src/enums.rs` as Rust `enum`
 
 ## 3. Diesel models
 
-**25 governance model files** under `crates/db_schema/src/source/governance/` (`mod.rs` aggregates them). All read structs derive `Identifiable, Queryable, Selectable` (under `feature = "full"`) + `PartialEq, Eq, Serialize, Deserialize, Debug, Clone`, `#[skip_serializing_none]`, `check_for_backend(Pg)`, and (most) `ts_rs::TS`. Newtype IDs (`ModerationCaseId`, `PersonId`, etc.) wrap the integer PKs.
+**26 governance model files** under `crates/db_schema/src/source/governance/` (`mod.rs` aggregates them). All read structs derive `Identifiable, Queryable, Selectable` (under `feature = "full"`) + `PartialEq, Eq, Serialize, Deserialize, Debug, Clone`, `#[skip_serializing_none]`, `check_for_backend(Pg)`, and (most) `ts_rs::TS`. Newtype IDs (`ModerationCaseId`, `PersonId`, etc.) wrap the integer PKs.
+
+> **`id` field convention.** The surrogate integer primary key (`id`) is implicit for all structs that use a standard SERIAL/BIGSERIAL PK; field listings below omit it except where the PK type is notable (e.g. `GovernanceLog` uses `id: GovernanceLogId`, `FederationPeer` uses `instance_id: InstanceId`, `FederationInboxNonce` has a composite PK). In all other cases assume an `id` field of the corresponding newtype exists as the first column.
 
 > **Insert-form vs read-struct asymmetry (load-bearing).** Many models have enum/timestamp columns that are **NON-Option on the read struct but `Option<…>` on the InsertForm** because the DB supplies a DEFAULT. For each such column, the SQL column MUST be `NOT NULL DEFAULT …` or the read-side `Queryable` fails at runtime on any row inserted via the default path. Verified instances: `moderation_case.{severity_tier, status_tier}`, `reputation_event.source_event_type`, `sanction.active`, `remote_sanction_notice.{peer_trust_level_at_receipt, admin_action}`, `remote_moderation_label.{peer_trust_level_at_receipt, admin_action}`, `federation_attestation.admin_action`, `federation_peer.notes`. All confirmed `NOT NULL DEFAULT` in their DDL.
 
@@ -179,6 +181,10 @@ All governance enums live in `crates/db_schema_file/src/enums.rs` as Rust `enum`
 - **`federation_peer.rs` → `FederationPeer`** (v1-fed-inbound-a) — `#[diesel(primary_key(instance_id))]`: `instance_id: InstanceId`, `trust_level: FederationPeerTrust`, `added_at`, `added_by_actor: Option<String>`, `notes: Value` (NON-Option), `updated_at`. Free fns: `federation_inbox_check_peer_trust(peer_domain, conn)` (returns `Unknown` when absent), `federation_peer_upsert_trust(...)`.
 - **`federation_inbox_dropped_log.rs` → `FederationInboxDroppedLog`** (v1-fed-inbound-a) — `source_instance`, `activity_id: Option<String>`, `drop_reason`, `payload_excerpt: Option<String>`, `dropped_at`. Insert-only append log.
 - **`federation_inbox_nonce.rs` → `FederationInboxNonce`** (v1-fed-inbound-a) — `peer_instance`, `activity_id`, `seen_at`. **No `Identifiable` / no `ts_rs`** (composite PK `(peer_instance, activity_id)`). Free fn `delete_older_than(window_days, conn)` (replay cleanup; wired by v1-federation-inbound-b cron).
+
+### M2 messaging config (m2-messaging lane)
+
+- **`governance_messaging_config.rs` → `GovernanceMessagingConfig`** (m2-messaging) — `scope`, `key`, `value_type`, `value_int: Option<i64>`, `value_bool: Option<bool>`, `value_text: Option<String>`, `valid_from`, `updated_by: Option<PersonId>`. Mirrors `GovernanceConfig` but omits `value_float` (messaging config never uses float knobs). Free fns `create(conn, form)` and `read_current(conn, scope, key)`. Append-only insert pattern; no `AsChangeset`.
 
 ### Helper module (not a model)
 
