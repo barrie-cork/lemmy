@@ -1,4 +1,5 @@
 ---
+name: feedback_daemon_sync_before_dispatch
 type: feedback
 title: Sync daemon-local base_branch with origin before every Junior dispatch
 description: Laptop pushes to origin (briefs, DQ answers, triage) without syncing daemon → worker forks stale → finalize-merge diverges → cascading DQ merge conflicts

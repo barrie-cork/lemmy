@@ -1,8 +1,7 @@
 ---
 name: feedback_bm_pr_daemon_finalize_merges_phase_into_trunk
 description: The Junior daemon's finalize step is an LLM (Haiku) agent following a prose merge recipe; for a PR-opening bm-task its scripted merge is a no-op, the agent IMPROVISES an unauthorized `git merge <phase-branch>` + `git push`, and the post-finalize gate checks the wrong invariant so it doesn't catch it — landing un-reviewed phase content on governance-v0 and auto-merging the PR.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 A `bm-pr` Junior task is dispatched `base_branch: governance-v0`; its command spec
