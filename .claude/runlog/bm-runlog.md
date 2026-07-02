@@ -2364,3 +2364,23 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **CR findings disposition:** cr-1/cr-2 (doc-lint) addressed via runlog fix; cr-3 (token scaffold) rebutted (Phase-6 integration); cr-4 (single-presenter) fixed + validated (8b8c877a7)
 - **All pre-merge gates verified:** mergeStateStatus CLEAN ✓ | mergeable MERGEABLE ✓ | CI all green ✓ | DQ pending 0 ✓ | CR findings all addressed ✓
 
+
+## bm: poll-cr — 2026-07-02T16:42:20Z
+- **PR:** #212 (chore/cut-dead-code-safe-set → governance-v0)
+- **head SHA:** 29ec4682c (first poll)
+- **CR comments seen:** 3 (1 review / 1 inline / 1 issue)
+- **Actionable findings ingested:** 2 (1 from walkthrough pre-merge check)
+- **New findings this poll:** 2
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 1 open, 1 wont-fix | nit 0/0/0
+- **Recommendation:** approve
+- **YAML:** .claude/PRPs/reviews/pr-212-findings.yaml
+- **Notes:** Copilot: no reviews present (coderabbitai only). cr-2 (stale CanReceiveVote doc ref at state.rs:161) verified real via grep — sole occurrence in crates/**, doc-only, consistent with green cargo gates. Per parent-task instruction: YAML NOT committed/pushed (no pushes to branch this invocation).
+- **walkthrough_summary:** review effort 3 (Moderate) ~25 min; 13 files; 10 flagged "no reviewable changes" (pure deletions); pre-merge 4 passed / 1 warning (Description check).
+
+## bm: triage — 2026-07-02T16:44:00Z
+- **PR:** #212
+- **Buckets:** fix-in-pr 1 (low) | rebut 0 | carry-forward 0 | done 0 | wont-fix 1 (low)
+- **Comment posted?** no — draft only at .claude/PRPs/reviews/pr-212-comment.md (parent-task instruction: no outbound this invocation)
+- **Carry-forward issues filed:** 0
+- **Recommendation:** approve

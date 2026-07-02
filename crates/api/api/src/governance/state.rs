@@ -158,7 +158,7 @@ mod inner {
     }
   }
 
-  /// Site 6: Open | ThresholdMet | JurySelection | InReview (non-terminal, CanReceiveVote).
+  /// Site 6: Open | ThresholdMet | JurySelection | InReview (non-terminal vote-accepting states).
   ///
   /// This site has **success-not-error** semantics on terminal states:
   /// `submit_jury_vote` returns `Ok(case_decided:true)` for terminal cases, NOT a 404.
