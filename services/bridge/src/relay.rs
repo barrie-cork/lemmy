@@ -1,54 +1,19 @@
-// 1:1 DM relay — both directions.
+// 1:1 DM relay — Matrix→Brehon direction.
 //
-// Brehon→Matrix: a Brehon bridge-notify call arrives (from the
-//   bridge_notify HTTP endpoint added in Tree B Task 6). The relay
-//   resolves/creates a puppet via PuppetMap::ensure_puppet, opens a
-//   DM room if necessary, and sends the message as the puppet.
-//   M1: send_as_puppet is a stub; full implementation gated by Task 13.
+// An inbound AS transaction (from Tuwunel) is handed off here by
+// handle_transactions in appservice.rs. The relay maps each Matrix
+// event back to a Brehon user ID and POSTs to the Brehon notify
+// callback URL (brehon_notify_url).
 //
-// Matrix→Brehon: an inbound AS transaction (from Tuwunel) is handed
-//   off here by handle_transactions in appservice.rs. The relay maps
-//   each Matrix event back to a Brehon user ID and POSTs to the
-//   Brehon notify callback URL (brehon_notify_url).
-//
-// M1 scope: text messages (m.text), image upload + m.image, voice
-//   upload + m.audio. The <3s round-trip target is asserted in Task
-//   13's integration test; this task is cargo-gated only.
-//
-// This whole module is the 1:1 DM-relay feature. It is intentionally not yet
-// routed into (the pilot exercises governance room provisioning + sanctions,
-// not 1:1 DM), so its items are unused at the crate level. Allow dead_code
-// module-wide rather than per-item — these are a coherent pending feature, not
-// stragglers. Remove the allow when DM relay is wired (the dm_round_trip test).
-#![allow(dead_code)]
-
-use std::sync::Arc;
+// The Brehon→Matrix direction (send-as-puppet) is M2 scope — see
+// tests/dm_round_trip.rs; it was scaffolded here and cut 2026-07-02
+// (chore/cut-dead-code-safe-set) pending real wiring.
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 
-use crate::{config::BridgeConfig, puppet::PuppetMap};
-
-/// Payload of an inbound Brehon bridge-notify call (Brehon→Matrix direction).
-/// Sent by Brehon Task 6 bridge_notify endpoint to the bridge.
-#[derive(Debug, Deserialize)]
-pub struct BridgeNotifyPayload {
-    /// Brehon sender user-id (used to look up/create the puppet).
-    pub brehon_sender: String,
-    /// Brehon recipient user-id (used to look up/create the recipient puppet).
-    pub brehon_recipient: String,
-    /// Message content — one of text/image/voice.
-    pub content: BridgeMessageContent,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum BridgeMessageContent {
-    Text { body: String },
-    Image { url: String, mimetype: String, size: Option<u64> },
-    Voice { url: String, duration_ms: Option<u32> },
-}
+use crate::config::BridgeConfig;
 
 /// Outbound payload: bridge POSTs this to brehon_notify_url when a
 /// Matrix DM arrives addressed to a Brehon-managed puppet.
@@ -196,25 +161,4 @@ fn infer_brehon_recipient(event: &Value) -> Option<String> {
     }
 
     None
-}
-
-/// Brehon→Matrix: send a DM from a Brehon user as their puppet to a
-/// recipient puppet's DM room.
-///
-/// M1 stub: ensures puppets exist in the map, then returns a placeholder
-/// room id. Full AS-client send is gated by Task 13's integration test.
-pub async fn send_as_puppet(
-    payload: &BridgeNotifyPayload,
-    _config: Arc<BridgeConfig>,
-    puppet_map: Arc<PuppetMap>,
-) -> Result<String> {
-    let sender_mxid = puppet_map.ensure_puppet(&payload.brehon_sender).await?;
-    let _recipient_mxid = puppet_map.ensure_puppet(&payload.brehon_recipient).await?;
-
-    tracing::info!(
-        sender = %sender_mxid,
-        "TODO(task 13): wire send_as_puppet via AS client"
-    );
-
-    Ok(String::from("stub-room"))
 }

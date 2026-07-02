@@ -9,8 +9,6 @@
 //!   that returns a `SanctionNoticeSendPlan`; the orchestrator (Agent F's
 //!   `lemmy_api::governance::federation_outbox`) opens the tx and calls
 //!   both the activity enqueue + governance_log append. Resolves DQ-6.6.
-//! - [`verify`] — shared verification helpers (Agent E, plan task 78).
-//!   Thin wrapper over `activitypub_federation::protocol::verification`.
 //! - [`inbox`] — re-export of the inbound receivers that live in
 //!   `lemmy_apub_activities::governance::inbox` (Agent E, plan task 75).
 //!   Per advisor decision DQ-6.6-inbound (resolved id 37 in
@@ -22,6 +20,5 @@
 //!   without taking a direct dep on `lemmy_apub_activities`.
 
 pub mod outbox;
-pub mod verify;
 
 pub use lemmy_apub_activities::governance::inbox;

@@ -33,14 +33,14 @@ time = "=0.3.47"
 ed25519-dalek = "2"
 hex = "0.4"
 jsonwebtoken = "9"
-# sha2: promote transitive→direct (already in Cargo.lock; zero new resolution risk).
-sha2 = "0.10"
-# rust-s3: generic-S3 client for recording uploads (R12: endpoint from config,
-# never hardcoded; R14: Cargo.lock regenerated in this commit).
-rust-s3 = "0.34"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util"] }
+# sha2 + rust-s3: used only by tests/recording.rs since the recording-capture
+# scaffold was cut (2026-07-02); move back to [dependencies] when the live
+# Egress/upload chain is wired.
+sha2 = "0.10"
+rust-s3 = "0.34"
 # livekit-api: publisher-client handle for the emergency-mute <500ms measurement (task 4 marquee,
 # criterion 141). Provides AccessToken (publisher-client grant state) + RoomClient (admin API to
 # revoke publish and verify zero-holder invariant at the CLIENT perspective, not the server handler
