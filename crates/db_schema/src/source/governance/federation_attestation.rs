@@ -53,15 +53,3 @@ pub struct FederationAttestationInsertForm {
   pub admin_action: Option<FederationInboxAdminAction>,
   pub dismissal_rationale: Option<String>,
 }
-
-#[derive(Clone, Default)]
-#[cfg_attr(feature = "full", derive(AsChangeset))]
-#[cfg_attr(feature = "full", diesel(table_name = federation_attestation))]
-pub struct FederationAttestationUpdateForm {
-  pub source_instance: Option<String>,
-  pub received_at: Option<DateTime<Utc>>,
-  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
-  pub admin_reviewed_at: Option<DateTime<Utc>>,
-  pub admin_action: Option<FederationInboxAdminAction>,
-  pub dismissal_rationale: Option<String>,
-}

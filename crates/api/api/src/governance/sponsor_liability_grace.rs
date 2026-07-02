@@ -53,8 +53,8 @@ use lemmy_db_schema_file::{
   enums::{CaseStatus, SanctionAction, SanctionScope},
   schema::{endorsement, moderation_case, sanction, surety},
 };
-use lemmy_diesel_utils::connection::{DbConn, get_conn};
-use lemmy_utils::error::{LemmyErrorType, LemmyResult};
+use lemmy_diesel_utils::connection::get_conn;
+use lemmy_utils::error::LemmyResult;
 use serde_json::json;
 use tracing::{info, warn};
 
@@ -281,74 +281,6 @@ pub async fn evaluate_escape_conditions(
   let _ = case_id; // suppress unused-var on stub branch
 
   Ok(EscapeStatus::Fire)
-}
-
-/// Public entry for caller-driven per-case fire/escape. The batch loop
-/// uses `fire_or_escape_case_inner` directly inside its per-case
-/// `run_transaction` closure. This public entry is available for
-/// future callers (admin-driven manual runs, etc.).
-///
-/// For the Fire branch, this entry returns an error — callers must
-/// use `run_grace_check_batch` which has access to the sanction-action
-/// context needed by the Fire branch.
-pub async fn fire_or_escape_case(
-  conn: &mut DbConn<'_>,
-  case: ModerationCase,
-  status: EscapeStatus,
-  _cache: &mut ConfigCache,
-) -> LemmyResult<()> {
-  let now: DateTime<Utc> = Utc::now();
-  conn
-    .run_transaction(async |conn| {
-      match status {
-        EscapeStatus::Escape {
-          reason,
-          actor_pseudonym,
-          ref_id,
-        } => {
-          let escape_reason_json = json!({
-            "version": 1,
-            "reason": reason,
-            "actor_pseudonym": actor_pseudonym,
-            "endorsement_id": ref_id,
-          });
-          diesel::update(
-            moderation_case::table.filter(moderation_case::id.eq(case.id)),
-          )
-          .set((
-            moderation_case::status.eq(CaseStatus::SponsorLiabilityEscaped),
-            moderation_case::liability_escape_reason.eq(Some(escape_reason_json)),
-          ))
-          .execute(conn)
-          .await?;
-          governance_log::append(
-            &mut (&mut *conn).into(),
-            ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED,
-            json!({
-              "case_id": case.id.0,
-              "escaped_at": now,
-              "reason": reason,
-              "actor_pseudonym": actor_pseudonym,
-              "endorsement_id": ref_id,
-            }),
-            Some(actor_pseudonym),
-          )
-          .await?;
-          Ok(())
-        }
-        EscapeStatus::Fire => {
-          // Fire branch (caller-driven) — requires sanction-action context.
-          // Callers without that context must use run_grace_check_batch instead.
-          Err(
-            LemmyErrorType::Unknown(
-              "fire_or_escape_case public entry: Fire branch requires sanction-action context; call run_grace_check_batch instead".to_string(),
-            )
-            .into(),
-          )
-        }
-      }
-    })
-    .await
 }
 
 /// Staleness observability: emits `tracing::error!` if any

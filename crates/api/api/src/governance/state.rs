@@ -33,20 +33,8 @@ mod inner {
 
   /// Site 6 (submit_jury_vote): Open | ThresholdMet | JurySelection | InReview.
   /// The terminal-state idempotency guard preserves `Ok(case_decided:true)` semantics
-  /// via the `CanReceiveVote` sentinel — see `GovernanceCase::<Active>::try_active_vote`.
+  /// — see `GovernanceCase::<Active>::try_active_vote`.
   pub struct Active;
-
-  // ── Sealed trait for site 6 success-preserving sentinel ───────────────────
-
-  /// Sealed — only `Active` implements it.
-  pub trait CanReceiveVote: sealed::Sealed {}
-
-  mod sealed {
-    pub trait Sealed {}
-    impl Sealed for super::Active {}
-  }
-
-  impl CanReceiveVote for Active {}
 
   // ── Core wrapper ──────────────────────────────────────────────────────────
 
@@ -235,6 +223,6 @@ mod inner {
 
 #[cfg(feature = "full")]
 pub use inner::{
-  Active, ActiveVoteResult, Appealed, CanReceiveVote, GovernanceCase, JurySelection,
+  Active, ActiveVoteResult, Appealed, GovernanceCase, JurySelection,
   NotYetClosed, PreJuryAssignable, SponsorLiabilityPending,
 };

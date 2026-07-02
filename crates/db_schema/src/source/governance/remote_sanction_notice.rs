@@ -58,14 +58,3 @@ pub struct RemoteSanctionNoticeInsertForm {
   pub admin_action: Option<FederationInboxAdminAction>,
   pub dismissal_rationale: Option<String>,
 }
-
-#[derive(Clone, Default)]
-#[cfg_attr(feature = "full", derive(AsChangeset))]
-#[cfg_attr(feature = "full", diesel(table_name = remote_sanction_notice))]
-pub struct RemoteSanctionNoticeUpdateForm {
-  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
-  pub admin_reviewed_at: Option<DateTime<Utc>>,
-  pub admin_action: Option<FederationInboxAdminAction>,
-  pub dismissal_rationale: Option<String>,
-  pub local_case_id: Option<Option<ModerationCaseId>>,
-}

@@ -37,24 +37,3 @@ pub fn upsert(conn: &Connection, app_id: &str, app_local_id: &str, brehon_actor_
     Ok(())
 }
 
-#[allow(dead_code)]
-pub fn lookup(conn: &Connection, app_id: &str, app_local_id: &str) -> Result<Option<String>> {
-    let mut stmt = conn.prepare(
-        "SELECT brehon_actor_id FROM app_actor_link WHERE app_id = ?1 AND app_local_id = ?2 AND revoked_at IS NULL"
-    )?;
-    let mut rows = stmt.query(params![app_id, app_local_id])?;
-    if let Some(row) = rows.next()? {
-        Ok(row.get(0)?)
-    } else {
-        Ok(None)
-    }
-}
-
-#[allow(dead_code)]
-pub fn revoke(conn: &Connection, app_id: &str, app_local_id: &str) -> Result<()> {
-    conn.execute(
-        "UPDATE app_actor_link SET revoked_at = strftime('%s', 'now') WHERE app_id = ?1 AND app_local_id = ?2",
-        params![app_id, app_local_id],
-    )?;
-    Ok(())
-}
