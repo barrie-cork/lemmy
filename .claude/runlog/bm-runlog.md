@@ -2384,3 +2384,23 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Comment posted?** no — draft only at .claude/PRPs/reviews/pr-212-comment.md (parent-task instruction: no outbound this invocation)
 - **Carry-forward issues filed:** 0
 - **Recommendation:** approve
+
+## bm: poll-cr — 2026-07-02T17:38:30Z
+- **PR:** #212 (chore/cut-dead-code-safe-set → governance-v0)
+- **head SHA:** 76c61bab6 (advanced from 29ec4682c — two pushes: 0cbdf3540 cr-2 fix, 76c61bab6 second deletion tranche +51/−1040)
+- **CR comments seen:** 5 (2 review / 2 inline / 1 issue)
+- **Actionable findings ingested:** 3 total (1 new this poll)
+- **New findings this poll:** 1 — cr-3 (low, registry Semantic-column reword request at governance-log-entry-kind-registry.md:93)
+- **Findings addressed since last poll:** 1 — cr-2 → done, addressed_in 0cbdf3540 (grep-verified: zero CanReceiveVote refs remain in crates/** + services/**)
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 0 open / 1 done / 1 rebutted / 1 wont-fix | nit 0/0/0
+- **Recommendation:** approve
+- **YAML:** .claude/PRPs/reviews/pr-212-findings.yaml
+- **Notes:** CR incremental review posted 17:34:40Z (~8 min after 17:26 push). cr-3 bucketed rebut: premise ("row reads like live behavior") contradicted by the row's own Emitting-handler column updated in 76c61bab6 ("none (pending) — never-called builder cut..."); Semantic column format matches sibling rows; grep confirms no code emitter remains (const def + registry-array inclusion only, intentional keeps). Pre-merge Description-check warning persists unchanged (cr-1, wont-fix). Per parent-task hard limits: YAML + runlog writes only — no commit, no push, no PR comment.
+
+## bm: triage — 2026-07-02T17:39:00Z
+- **PR:** #212
+- **Buckets:** fix-in-pr 0 | rebut 1 (cr-3, low) | carry-forward 0 | done 1 (cr-2 @ 0cbdf3540) | wont-fix 1 (cr-1, low)
+- **Comment posted?** no — parent-task hard limit: no outbound this invocation
+- **Carry-forward issues filed:** 0
+- **Merge-state:** OPEN | MERGEABLE | CLEAN | checks: Red-flag diff scan SUCCESS, MiniMax M3 governance review SUCCESS, CodeRabbit SUCCESS
+- **Recommendation:** approve — zero open findings, no critical/major, both cargo gates green per PR body
