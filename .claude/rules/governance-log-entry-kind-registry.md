@@ -90,7 +90,7 @@ through the `api` shim.
 |---|---|---|---|---|
 | `ENTRY_KIND_FEDERATION_SANCTION_SENT` | `federation_sanction_sent` | Phase 6 shipped | `crates/api/api/src/governance/federation_outbox.rs` | Outbound sanction AP activity enqueued for delivery |
 | `ENTRY_KIND_FEDERATION_SANCTION_RECEIVED` | `federation_sanction_received` | Phase 6 shipped | `crates/apub/activities/src/governance/inbox.rs::receive_remote_sanction_notice` | Inbound sanction AP received (advisory; `local_case_id = NULL`) |
-| `ENTRY_KIND_FEDERATION_ATTESTATION_SENT` | `federation_attestation_sent` | Phase 6 shipped | `federation_outbox.rs` (builder at `crates/apub/activities/src/governance/publish_trust_attestation.rs`) | Outbound trust attestation enqueued |
+| `ENTRY_KIND_FEDERATION_ATTESTATION_SENT` | `federation_attestation_sent` | Phase 6 shipped | none (pending) — never-called builder cut 2026-07-02 chore/cut-dead-code-safe-set; v1 endorsement wiring re-adds the emitter mirroring `publish_sanction_notice.rs` | Outbound trust attestation enqueued |
 | `ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED` | `federation_attestation_received` | Phase 6 shipped | `inbox.rs::receive_remote_trust_attestation` | Inbound attestation received (advisory) |
 
 ## v1-AD-a entry kinds (2, this sub-phase)

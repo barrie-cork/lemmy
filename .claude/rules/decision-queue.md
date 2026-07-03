@@ -23,7 +23,7 @@ derivable from `timestamp` + git history) — do not re-add.
 
 v3 is an additive, forward-only extension of schema-v2. All v2 fields and semantics are preserved. Do not rewrite pre-v3 entries.
 
-Top-level keys are unchanged from v2: `pending` (array), `resolved` (array), `schema_version` (now `3`). The `dq-schema-v3-migrate.sh` migration adds two new fields to every existing entry and bumps `schema_version` to `3`.
+Top-level keys are unchanged from v2: `pending` (array), `resolved` (array), `schema_version` (now `3`). The v2→v3 migration (a one-off, since removed) added two new fields to every existing entry and bumped `schema_version` to `3`.
 
 **Composite id (post-v1-dq-schema-r1, 2026-05-21).** Every new DQ entry written after v3 ships uses `id: "<session_id>-<sequence>"` where `session_id` is a per-CC-session 12-hex UUID (cached in gitignored `.claude/.dq-session-id`) and `sequence` is a per-session monotonic 3-digit counter (`001`, `002`, ...). Example: `a1b2c3d4e5f6-001`. The global `next_id = max(all_ids) + 1` recipe is abolished for new v3 entries — id namespaces are now per-session, making collisions arithmetically impossible.
 

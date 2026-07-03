@@ -366,42 +366,6 @@ impl Stage {
         });
     }
 
-    /// First emission of room_recording_uploaded.  Push the EmitIntent carrying
-    /// the Success-Criteria schema; drained by the existing drain_emits →
-    /// post_room_event → append_room_event (the content_sha256 rides THERE — R11).
-    /// `speakers` are PSEUDONYMS (ADR-015); the actor is the chair pseudonym.
-    pub fn record_uploaded(
-        &mut self,
-        media_url: String,
-        content_sha256: String,
-        duration_s: i64,
-        speakers: Vec<String>,
-        attendance_count: i32,
-    ) -> Result<()> {
-        let chair = self.chair.clone().ok_or_else(|| anyhow!(
-            "record_uploaded requires a chair pseudonym; refusing to emit room_recording_uploaded with actor_pseudonym=None"
-        ))?;
-        self.pending_emits.push(EmitIntent {
-            entry_kind: "room_recording_uploaded",
-            payload: RoomEventPayload {
-                case_id: self.case_id as i32,
-                matrix_room_id: None,
-                lifecycle_stage: self.room_type.clone(),
-                member_count: None,
-                action: None, target_pseudonym: None,
-                from_pseudonym: None, to_pseudonym: None, at: None,
-                federated: None,
-                media_url: Some(media_url),
-                content_sha256: Some(content_sha256),
-                duration_s: Some(duration_s),
-                speakers: Some(speakers),
-                attendance_count: Some(attendance_count),
-            },
-            actor_pseudonym: Some(chair), // uploader/chair pseudonym (ADR-015 pin)
-        });
-        Ok(())
-    }
-
     fn flush_queue(&self, conn: &Connection) -> Result<()> {
         let v: Vec<&str> = self.fifo.iter().map(String::as_str).collect();
         let json = serde_json::to_string(&v)?;
@@ -787,50 +751,4 @@ mod tests {
         Ok(())
     }
 
-    /// §16a Story 1 (recording) — record_uploaded pushes a room_recording_uploaded EmitIntent
-    /// with all 5 recording fields populated and actor_pseudonym == chair (ADR-015).
-    #[test]
-    fn record_uploaded_emits_recording_intent() -> Result<()> {
-        let (mut stage, _conn) = open_stage(12);
-        stage.chair = Some("chair-pseudonym".to_string());
-
-        stage.record_uploaded(
-            "https://s3.example.com/room-1.mp4".to_string(),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".to_string(),
-            600,
-            vec!["speaker-pseudonym-a".to_string(), "speaker-pseudonym-b".to_string()],
-            42,
-        )?;
-
-        assert_eq!(stage.pending_emits.len(), 1, "exactly one EmitIntent must be queued for record_uploaded");
-        let emit = &stage.pending_emits[0];
-        assert_eq!(emit.entry_kind, "room_recording_uploaded", "entry_kind must be room_recording_uploaded");
-        assert_eq!(
-            emit.payload.media_url,
-            Some("https://s3.example.com/room-1.mp4".to_string()),
-            "media_url must be present"
-        );
-        assert_eq!(
-            emit.payload.content_sha256,
-            Some("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".to_string()),
-            "content_sha256 must be present (rides append_room_event via EmitIntent — R11)"
-        );
-        assert_eq!(emit.payload.duration_s, Some(600), "duration_s must be present");
-        assert_eq!(
-            emit.payload.speakers,
-            Some(vec!["speaker-pseudonym-a".to_string(), "speaker-pseudonym-b".to_string()]),
-            "speakers must be pseudonyms (ADR-015)"
-        );
-        assert_eq!(emit.payload.attendance_count, Some(42), "attendance_count must be present");
-        assert_eq!(
-            emit.actor_pseudonym,
-            Some("chair-pseudonym".to_string()),
-            "actor_pseudonym must be the chair pseudonym (ADR-015 pin)"
-        );
-        // Chair-action and federated fields must be absent from this emission kind.
-        assert!(emit.payload.action.is_none(), "action must be absent in recording_uploaded emit");
-        assert!(emit.payload.from_pseudonym.is_none(), "from_pseudonym must be absent");
-        assert!(emit.payload.federated.is_none(), "federated must be absent in recording_uploaded emit");
-        Ok(())
-    }
 }

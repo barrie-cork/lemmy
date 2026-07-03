@@ -44,13 +44,3 @@ pub struct RemoteModerationLabelInsertForm {
   pub local_case_id: Option<ModerationCaseId>,
   pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
 }
-
-#[derive(Clone, Default)]
-#[cfg_attr(feature = "full", derive(AsChangeset))]
-#[cfg_attr(feature = "full", diesel(table_name = remote_moderation_label))]
-pub struct RemoteModerationLabelUpdateForm {
-  pub local_case_id: Option<Option<ModerationCaseId>>,
-  pub admin_reviewed_at: Option<DateTime<Utc>>,
-  pub admin_action: Option<FederationInboxAdminAction>,
-  pub dismissal_rationale: Option<Option<String>>,
-}

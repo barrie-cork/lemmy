@@ -52,10 +52,10 @@ async fn recording_lands_with_hash_on_chain() -> anyhow::Result<()> {
     // Synthetic pilot-grade bytes (not a real MP4; Egress deferred to full Phase-6 pilot).
     let mp4_bytes: &[u8] = b"PHASE6-PILOT-FAKE-MP4-RECORDING-BYTES";
 
-    // 1. Compute content_sha256 — same algorithm as compute_content_sha256 in src/recording.rs.
-    //    In production this hash RIDES append_room_event (R-CHAIN/R11) via maybe_record →
-    //    stage.record_uploaded → drain_emits → post_room_event.  The test replicates the
-    //    sha2 computation to derive the expected value, then verifies it in step 4.
+    // 1. Compute content_sha256 (hex SHA-256 of the MP4 bytes).  In production this
+    //    hash RIDES append_room_event (R-CHAIN/R11); the capture chain that computes
+    //    it bridge-side is not yet wired (recording scaffold cut 2026-07-02).  The
+    //    test derives the expected value, then verifies it in step 4.
     use sha2::{Digest, Sha256};
     let expected_sha256 = {
         let mut h = Sha256::new();
@@ -63,7 +63,7 @@ async fn recording_lands_with_hash_on_chain() -> anyhow::Result<()> {
         hex::encode(h.finalize())
     };
 
-    // 2. Upload MP4 bytes to MinIO (live S3 PUT — mirrors LiveSink::upload; R-S3ENDPOINT).
+    // 2. Upload MP4 bytes to MinIO (live S3 PUT; R-S3ENDPOINT).
     let creds = s3::creds::Credentials::new(
         Some(&s3_access_key),
         Some(&s3_secret_key),
@@ -212,22 +212,17 @@ async fn clean_posture_no_recording_when_disabled() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("S3 bucket init: {e}"))?;
 
     // 3. Assert NO MinIO object exists for this recording (R7 integration-level invariant).
-    //    When the provisioner is eventually wired to call maybe_record:
-    //    - recording_config has record_town_halls=false
-    //    - maybe_record(false, ..) hits the flag gate `if !enabled { return }` → no upload
-    //    - If the gate is removed, maybe_record would fire and PUT {mp4_key} to MinIO → FAIL
-    //    The unit-level delete-the-gate proof lives in
-    //    src/recording.rs::clean_posture_no_side_effects_when_disabled.
+    //    recording_config has record_town_halls=false, and no capture chain exists that
+    //    could upload regardless (recording scaffold cut 2026-07-02).  When the capture
+    //    chain is wired, its flag gate must keep this assertion green.
     let object_exists = bucket.get_object(&mp4_key).await.is_ok();
     assert!(
         !object_exists,
-        "R7 violated: MinIO object {mp4_key} found — recording fired when record_town_halls=false \
-         (flag gate in maybe_record removed, or unexpected upload triggered)"
+        "R7 violated: MinIO object {mp4_key} found — recording fired when record_town_halls=false"
     );
 
-    // 4. Zero MinIO side-effects confirm: no governance_log chain row either (append_room_event
-    //    is only reachable via drain_emits, which is only called after stage.record_uploaded,
-    //    which is only called from maybe_record when it doesn't short-circuit on !enabled).
+    // 4. Zero MinIO side-effects confirm: no governance_log chain row either (nothing
+    //    emits room_recording_uploaded when recording is disabled).
 
     // ADR-015: the chair pseudonym in the disabled room must be an opaque pseudonym.
     assert!(!chair_pseudonym.contains('@'), "ADR-015: chair must not be a Matrix MXID");

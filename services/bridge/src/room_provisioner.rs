@@ -722,14 +722,6 @@ async fn provision_membership_mirror(state: Arc<AppState>, event: CaseTransition
     }
 }
 
-/// OQ-009: reveal threshold (default 1; T4b wires the real config value from bridge-read route).
-/// Superseded at runtime by the `state.oq009_reveal_threshold` atomic (fed by the
-/// soft-pause poller); retained as the documented default until T4b lands.
-#[allow(dead_code)]
-fn oq009_threshold() -> usize {
-    1
-}
-
 /// OQ-009: query the Matrix room event count via GET /messages?limit=1.
 /// Returns chunk length (0 on any error — fail-safe).
 async fn query_room_event_count(state: &AppState, room_id: &str) -> usize {

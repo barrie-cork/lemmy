@@ -18,8 +18,7 @@
 //! DB reads only and return a `*SendPlan` describing what to send. The
 //! orchestrator (Agent F's `crate::governance::federation_outbox` module
 //! inside `lemmy_api`) opens a `conn.run_transaction`, calls
-//! [`enqueue_sanction_notice_activity`] /
-//! [`enqueue_trust_attestation_activity`] on the tx conn, then calls
+//! [`enqueue_sanction_notice_activity`] on the tx conn, then calls
 //! `lemmy_api::governance::governance_log::append` on the same conn.
 //! The transaction guarantees that the `sent_activity` INSERT and the
 //! `governance_log` append commit atomically, satisfying [06 §2.3]
@@ -32,13 +31,10 @@
 pub use lemmy_apub_activities::governance::publish_sanction_notice::{
   SanctionNoticeSendPlan, build_local_sanction_notice_plan, enqueue_sanction_notice_activity,
 };
-pub use lemmy_apub_activities::governance::publish_trust_attestation::{
-  TrustAttestationSendPlan, build_local_trust_attestation_plan, enqueue_trust_attestation_activity,
-};
 
-// The names below are aliases for the builders; they exist so the
-// outbox boundary preserves the brief's `send_local_*_notice` /
-// `send_local_*_attestation` naming. The `_plan` suffix on the canonical
-// names makes the builder/orchestrator split visible at every call site.
+// The name below is an alias for the builder; it exists so the
+// outbox boundary preserves the brief's `send_local_*_notice` naming.
+// The `_plan` suffix on the canonical name makes the builder/orchestrator
+// split visible at every call site. (The trust-attestation twin was cut
+// 2026-07-02 with its never-called builder path.)
 pub use lemmy_apub_activities::governance::publish_sanction_notice::send_local_sanction_notice_plan;
-pub use lemmy_apub_activities::governance::publish_trust_attestation::send_local_trust_attestation_plan;

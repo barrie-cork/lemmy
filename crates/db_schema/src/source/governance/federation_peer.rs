@@ -41,16 +41,6 @@ pub struct FederationPeerInsertForm {
   pub notes: Option<Value>,
 }
 
-#[derive(Clone, Default)]
-#[cfg_attr(feature = "full", derive(AsChangeset))]
-#[cfg_attr(feature = "full", diesel(table_name = federation_peer))]
-pub struct FederationPeerUpdateForm {
-  pub trust_level: Option<FederationPeerTrust>,
-  pub added_by_actor: Option<Option<String>>,
-  pub notes: Option<Value>,
-  pub updated_at: Option<DateTime<Utc>>,
-}
-
 #[cfg(feature = "full")]
 pub async fn federation_inbox_check_peer_trust(
   peer_domain: &str,
