@@ -28,7 +28,7 @@ The same jury-and-reputation model applies to online-native groups too, includin
 
 - It's a **social/moderation governance layer**, not a treasury or token-voting mechanism — it complements on-chain tooling rather than competing with it.
 - **No token exists and none is planned.** Voting weight comes from earned, decaying, multi-dimensional reputation — not from holding or staking anything.
-- **There is no blockchain component today.** Case decisions are hash-chained and signed locally (tamper-evident, publicly auditable log) but nothing is anchored on any chain, Solana included. That's an open question, not a shipped feature — see [What this is not](#what-this-is-not).
+- **No blockchain component today.** Case decisions are hash-chained and signed locally (tamper-evident, publicly auditable log). A narrow, later-stage evidential use — publishing hashes of case decisions to a public ledger — is envisaged for a future release, deliberately deferred and never load-bearing for governance itself. Nothing is anchored on any chain, Solana included, in this build — see [What this is not](#what-this-is-not).
 - If useful to a DAO, the natural fit is as the **moderation/reputation layer sitting alongside** its existing on-chain treasury and voting stack, not a replacement for either.
 
 We're sharing this as-is for evaluation, not claiming a Solana integration that doesn't exist yet.
@@ -67,7 +67,7 @@ Full mapping and rationale: [docs/brehon-law-inspired-network/01-vision-and-prin
 ## What this is not
 
 - **Not token-based governance.** No on-chain voting, no "more tokens = more power", no token at all.
-- **Not on-chain today.** The governance log is a local, cryptographically signed hash chain — tamper-evident and auditable, but not anchored to any blockchain. Whether/how to anchor it is an open question, not a roadmap commitment.
+- **Not on-chain today.** The governance log is a local, cryptographically signed hash chain — tamper-evident and auditable, but not anchored to any blockchain in this build. A narrow, later-stage use is envisaged (publishing hashes of case decisions and rule changes to a public ledger as an evidential witness, not as judge or database) — deliberately deferred, and never the basis of everyday operation. See [docs/brehon-law-inspired-network/Brehn-Consensus-two-part-explainer.md](docs/brehon-law-inspired-network/Brehn-Consensus-two-part-explainer.md) §6-8.
 - **Not a wholesale replacement for Lemmy moderation.** Existing admin/mod pathways still work during the transition — this adds a jury layer, it doesn't rip out the old one on day one.
 - **Not a single reputation score.** Reputation is multi-dimensional and exposed as capabilities (can I sponsor, can I serve on a jury), not a leaderboard number.
 - **Not permanent-ban-by-default.** Reintegration paths exist below the highest sanction tier.
