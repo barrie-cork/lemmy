@@ -22,7 +22,22 @@ Brehon Consensus replaces admin-led moderation with a **procedure**: members rep
 
 It's a working fork of [Lemmy](https://github.com/LemmyNet/lemmy) (the federated, Reddit-style discussion platform) with this governance layer built in as new Rust modules alongside the existing codebase — not a separate app bolted on top. Each group runs its own instance (like a private forum), and instances can optionally federate with each other.
 
-**Current stage:** solo-developer research build, pre-pilot. Governance logic runs and is tested; it hasn't yet run a live community. See [Status](#status).
+**Current stage:** solo-developer research build. Governance logic runs and is tested end-to-end, and an internal pilot is in progress — it hasn't yet run a real community. See [Roadmap](#roadmap) and [Status](#status).
+
+## How this fits with other open-source platforms
+
+Brehon Consensus is a **governance layer, not another platform competing for your community**. The open-source world already has good places to talk — Reddit-style forums, chat, video, microblogging. What none of them ship is a fair way to *run* the group that uses them: membership, rules, and dispute-handling that don't hang off one admin. That's the layer this project builds, and it's designed to travel across open platforms the way email travels between providers — you shouldn't need everyone on the same software to play fair together.
+
+Concretely, the layer needs three things from a host platform: readable content (to gather evidence), a server-side surface to act through (to apply decisions), and stable member identities. Any open, self-hostable platform with those is a candidate host — and there are a lot to choose from.
+
+| Status | Platform | What runs there |
+| --- | --- | --- |
+| **Native** | Lemmy (ActivityPub, Reddit-style) | The full governance layer, in-process — this repo. |
+| **Live** | Matrix (Tuwunel homeserver + application-service bridge) | Jury deliberation rooms, appeal and emergency rooms — provisioned automatically from case state — plus 1:1 direct messages and town halls. Encrypted rooms are out of scope: governance needs readable evidence. |
+| **Designed, not built** | PeerTube (ActivityPub, YouTube-style) | The planned next host — same federation model as Lemmy. |
+| **Out of scope** | Serverless / end-to-end-encrypted P2P apps | No server-side evidence or enforcement surface to plug into. A boundary of the model, not a roadmap gap. |
+
+The same three criteria fit much of the open web — federated forums such as Discourse and NodeBB, ActivityPub microblogging, label-based moderation on Bluesky's AT Protocol. Those are directions, not current claims: today, Lemmy and Matrix are what's wired up.
 
 ## Also relevant to DAOs
 
@@ -43,6 +58,7 @@ The core loop: **report → jury assignment → vote → published decision → 
 - **Jury panels, not permanent mods** — cases are decided by a small panel randomly drawn from eligible members, who vote and move on. No one holds standing moderator power.
 - **Reputation held at risk** — members (and the sponsors who vouched for them) have reputation across four dimensions that can go down as well as up. Sponsoring someone who behaves badly costs you something, proportionally — which is what keeps vouching honest.
 - **Graduated, restorative sanctions** — label → reduced visibility → temporary restriction → jury case → community exclusion → federation-wide signal. Exclusion is a last resort, not the default response, and reintegration paths exist below the top tier.
+- **Deliberation happens in real rooms** — jurors deliberate in a private Matrix room provisioned automatically when their case needs one (appeals and emergencies get their own), and communities can hold town-hall meetings with chair-run mic-passing. Room lifecycle events go on the audit log; what's said in the room never does.
 - **Public, auditable log** — every case decision is recorded in a tamper-evident, cryptographically signed log and published (redacted where needed) so outcomes can be checked by members and outside observers alike.
 - **Federated** — built on ActivityPub, so instances running Brehon Consensus can share governance signals with each other while still talking normally to any regular Lemmy instance.
 
@@ -66,6 +82,20 @@ The mechanics are adapted from early Irish Brehon law, a system that maintained 
 
 Full mapping and rationale: [docs/brehon-law-inspired-network/01-vision-and-principles.md](docs/brehon-law-inspired-network/01-vision-and-principles.md).
 
+## Roadmap
+
+Work runs in milestones on `governance-v0`. The order is committed; dates are not.
+
+| Milestone | Scope | Status |
+| --- | --- | --- |
+| **Governance core** | The 11 `/api/v4/governance/*` endpoints: reports, jury cases, votes, appeals, sponsorship, reputation, admin config, federation-inbound. | ✅ Shipped |
+| **M1 — Chat infrastructure** | Matrix homeserver + application-service bridge, 1:1 direct messages with rich media, admin-configured community rooms. | ✅ Shipped |
+| **M2 — Governance-triggered rooms** | Jury, appeal, and emergency rooms provisioned automatically from case-state changes; room lifecycle recorded on the tamper-evident log (room *content* is never hashed). | ✅ Shipped |
+| **M3 — Town halls** | Stage-mode voice rooms: chair-controlled mic-passing, raised-hand queue, cross-instance emergency mute, optional recording as a governance artefact. | ✅ Shipped |
+| **Internal pilot** | First sustained live use with real accounts on a real deployment; go/no-go gate before any external community runs it. | ⏳ In progress |
+
+After the pilot, the direction is broader platform reach (PeerTube first — see [How this fits with other open-source platforms](#how-this-fits-with-other-open-source-platforms)) and a member-facing rulemaking surface: members proposing rule changes and the community consenting to them, rather than admins editing config. Neither is scheduled yet; design detail lands in [docs/brehon-law-inspired-network/](docs/brehon-law-inspired-network/00-README.md) as it firms up.
+
 ## What this is not
 
 - **Not token-based governance.** No on-chain voting, no "more tokens = more power", no token at all.
@@ -81,6 +111,7 @@ Full mapping and rationale: [docs/brehon-law-inspired-network/01-vision-and-prin
 - **Auth:** Lemmy's existing JWT, optional passkey MFA (`webauthn-rs`)
 - **Authorization:** hardcoded capability checks reading a `reputation_snapshot` — no external policy engine in v0
 - **Governance log:** `sha2` hash chain via Postgres triggers, `rs_merkle` + `ed25519-dalek` signing
+- **Messaging & RTC:** Matrix (Tuwunel homeserver) via an application-service bridge daemon (`services/bridge/`, workspace-excluded so the core build pulls zero Matrix deps); town-hall voice via LiveKit + Element Call
 - **Privacy:** pseudonymised actor identities from day one (GDPR-aware by design)
 - **License:** AGPL-3.0 (inherited from Lemmy)
 
