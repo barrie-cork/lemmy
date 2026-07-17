@@ -12,7 +12,7 @@
 
 Most online communities put moderation power in the hands of a small admin/mod team. That's a single point of failure: admins burn out, go rogue, or become a target for capture. It doesn't scale to groups that want to actually *self-govern* rather than be governed.
 
-Most of all, Brehon Consensus is a place for people to associate and organise together while experimenting with different ways of self-governance — in the spirit of [*The Dawn of Everything*](https://en.wikipedia.org/wiki/The_Dawn_of_Everything), in which an archaeologist and an anthropologist showed that human civilisation has always been made up of many different ways of structuring society. The idea that There Is No Alternative is nonsense.
+Most of all, Brehon Consensus is a place for people to associate and organise together while experimenting with different ways of self-governance — in the spirit of [*The Dawn of Everything*](https://en.wikipedia.org/wiki/The_Dawn_of_Everything), in which an archaeologist and an anthropologist summarised contemporary research to show that human civilisation has always been made up of many different ways of structuring society. The idea that There Is No Alternative is nonsense.
 
 This is built for any group of people who organise together and need a fair, low-drama way to handle disputes without appointing a permanent boss: a **neighbourhood or residents' association**, a **local gardening or allotment group**, a **community advocacy or campaign group**, an **academic working group or research collective**, a **mutual-aid network**, a **club or co-op** — civil society generally, wherever people self-organise online. These are groups run by volunteers, with no HR department and no appetite for one person holding all the moderation power.
 
