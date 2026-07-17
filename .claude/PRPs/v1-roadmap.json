@@ -8,7 +8,7 @@
   "scope": "M-track messaging milestones (M1/M2/M3) per umbrella `.claude/PRPs/prds/v2-messaging-rtc.prd.md` + ADR-016 backplane. v1 is shipped/closed (archived in `v1_shipped`); v0 substrate predates this file.",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_rewrite": "ba4a7163d",
-  "last_updated_at": "2026-06-05T16:45:00Z",
+  "last_updated_at": "2026-07-17T11:45:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane/milestone meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -74,10 +74,12 @@
       "former_name": "V2b / C2",
       "prd": ".claude/PRPs/prds/m2-governance-triggered-rooms.prd.md",
       "umbrella_prd": ".claude/PRPs/prds/v2-messaging-rtc.prd.md",
-      "status": "unstarted",
+      "status": "done",
+      "shipped_at": "2026-06-14",
       "depends_on": [
         "M1"
       ],
+      "evidence_summary": "Five sub-phases shipped 2026-06-06..2026-06-14: m2-core-hook (PR #184), m2-rooms-a (PR #191 — daemon-local finalize merge @9a878d10e; GitHub shows the PR closed-not-merged but content is on trunk, see retro), m2-late-1 (PR #192), m2-late-2 (PR #196), m2-late-b-actor (PR #197). All retros on trunk. Rooms-first scope decision held: rooms shipped before sanction propagation.",
       "scope": "Room-provisioning service that log-tails governance_log and creates/archives rooms on case-state transitions. Metadata-only hash-chain emission of the 11 Room::* entry kinds (Created, MembershipChanged, Archived, Tombstoned, ChairTransferred, ChairOverride, MuteAll, RecordingUploaded, EmergencyCreated, SpunOut, LifecycleApplied) — content inside rooms NEVER hashed. First real exercise of the ADR-016 backplane contract (B-fetch evidence adapter, B-publish sanction events, B-actor portable IDs). Jury room pinned always_pseudonym (ADR-015); graduated mutual visibility per OQ-009 (Juror-<suffix> revealed to fellow jurors only when discussion already in progress). Reported party / reporters / admins / visitors NEVER invited to jury rooms (deliberate stage-separation).",
       "key_hypothesis": "H2 (C2/V2b) — a log-tailing room-provisioning service can create a jury room within 5s of CaseStatus::JurySelection, idempotent across bridge restart, with correct Room::* hash-chain entries.",
       "acceptance_signals": [
@@ -87,35 +89,20 @@
         "emergency_remove provisions emergency room in <2s (integration test on admin_emergency_remove)"
       ],
       "oq_gates": {
-        "OQ-ADR016-02": {
-          "topic": "B-publish event schema + subscriber contract",
-          "status": "parked — target: resolve at M2 schedule time",
-          "blocks": "M2 sanction propagation + first non-Matrix app integration ADR",
-          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-02"
-        },
-        "OQ-ADR016-04": {
-          "topic": "sanction translation semantics — what 'muted globally' means in each app's primitives",
-          "status": "parked — target: resolve at M2 schedule time",
-          "blocks": "M2 (governance-triggered rooms emitting sanctions); per-app integration ADR for any second app",
-          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-04"
-        },
         "OQ-ADR016-01": {
           "topic": "B-fetch protocol shape + per-app adapter SPI",
-          "status": "parked — no longer blocks M1; first-blocks the M-phase that introduces evidence-fetch (likely M2 if M2 includes a MatrixEvidenceAdapter; else later)",
+          "status": "still open — M2 shipped its Matrix/bridge scope without a B-fetch evidence adapter; first-blocks the first non-Matrix app integration ADR",
           "blocks": "first evidence-fetch integration",
           "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-01"
-        },
-        "OQ-ADR016-03": {
-          "topic": "B-actor link-flow UX + mapping integrity (sign-claim to prevent re-pointing)",
-          "status": "parked — no longer blocks M1; first-blocks the phase that introduces the user-facing Brehon-link flow (likely M2)",
-          "blocks": "first B-actor link flow",
-          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-03"
         }
       },
       "resolved_gates": {
         "OQ-009": "Resolved 2026-06-01 — graduated mutual visibility for juror handles (concrete spec for jury-room membership rendering).",
         "OQ-V2-08": "Resolved 2026-06-03 — Brehon<->Brehon only (messaging plane is fork-only; vanilla peers see nothing).",
-        "ADR-013": "emergency_remove provisions emergency room in <2s — no enum/handler change; M2 adds a log-tailing consumer only."
+        "ADR-013": "emergency_remove provisions emergency room in <2s — no enum/handler change; M2 adds a log-tailing consumer only.",
+        "OQ-ADR016-02": "Resolved 2026-06-07 at m2-late pre-planning gate — adopted documented lean: universal sanction event schema; bridge subscriber auths via BRIDGE_CALLBACK_SECRET bearer; link-claim auth deferred to first non-Matrix integration ADR.",
+        "OQ-ADR016-04": "Resolved 2026-06-07 at m2-late pre-planning gate — Matrix-specific translation table for the four minimum sanction primitives.",
+        "OQ-ADR016-03": "Resolved 2026-06-13 at m2-late-b-actor pre-planning gate — dual-signed link-claim + canonical actor_app_link table; shipped PR #197."
       },
       "design_doc_extensions_due_at_m2": [
         "03 §4 — backplane contract details (deferred from ADR-016 to M-phase that builds it)",
@@ -124,27 +111,57 @@
         "07 §1.2 — federation fetch worker carries per-app B-fetch adapters",
         "07 §5 — operator runbook for connected-app onboarding"
       ],
-      "next_action": "M2-core: run /prp-plan .claude/PRPs/prds/m2-governance-triggered-rooms.prd.md (picks Phase 1). No OQ blockers for M2-core. M2-late: resolve OQ-ADR016-02 + OQ-ADR016-04 first.",
-      "scope_decision": "ROOMS-FIRST (user 2026-06-05): M2-core = room provisioning + 10 Room::* hash-chain entries + governance_case_after_transition hook (needs NO sanction OQs). M2-late = B-publish/B-actor sanction propagation, GATED on OQ-ADR016-02 + OQ-ADR016-04.",
-      "phases": {
-        "m2-core": {
-          "status": "unstarted",
-          "phases": "1-5 (hook, entry kinds, provisioning, hash-chain emission, e2e)",
-          "blocking": "none beyond M1 (shipped) — ready for /prp-plan now"
+      "next_action": "none — shipped. Doc 04 §3 synced with m2-messaging 2026-06-28 (2fea50f1f); remaining design_doc_extensions_due_at_m2 rows unaudited (see documentation_drift_followups).",
+      "scope_decision": "ROOMS-FIRST (user 2026-06-05): M2-core = room provisioning + 10 Room::* hash-chain entries + governance_case_after_transition hook (needs NO sanction OQs). M2-late = B-publish/B-actor sanction propagation, GATED on OQ-ADR016-02 + OQ-ADR016-04. Both halves shipped.",
+      "sub_phases": {
+        "m2-core-hook": {
+          "status": "done",
+          "scope": "governance_case_after_transition hook (in-binary slice)",
+          "pr": 184,
+          "merged_at": "2026-06-06",
+          "retro": ".claude/PRPs/reports/m2-core-hook-retro.md",
+          "verify": ".claude/PRPs/reports/m2-core-hook-verify.md"
         },
-        "m2-late": {
-          "status": "gated",
-          "phases": "6-7 (B-publish, B-actor)",
-          "blocking": "OQ-ADR016-02 + OQ-ADR016-04 (+ OQ-ADR016-03 for B-actor)"
+        "m2-rooms-a": {
+          "status": "done",
+          "scope": "Matrix room provisioning + Room::* hash-chain emission (bridge + workspace, 8 tasks)",
+          "pr": 191,
+          "merged_at": "2026-06-06",
+          "merge_note": "daemon-local finalize merge @9a878d10e (BM worker bypassed gh pr merge — see retro); GitHub shows PR #191 closed-not-merged; content verified on trunk",
+          "retro": ".claude/PRPs/reports/m2-rooms-a-retro.md",
+          "verify": ".claude/PRPs/reports/m2-rooms-a-verify.md"
+        },
+        "m2-late-1": {
+          "status": "done",
+          "scope": "B-publish sanction propagation: sanction_event + subscriber delivery",
+          "pr": 192,
+          "merged_at": "2026-06-08",
+          "retro": ".claude/PRPs/reports/m2-late-1-retro.md"
+        },
+        "m2-late-2": {
+          "status": "done",
+          "scope": "B-publish live wiring + CR atomicity fix (workspace + bridge, 5 tasks)",
+          "pr": 196,
+          "merged_at": "2026-06-12",
+          "retro": ".claude/PRPs/reports/m2-late-2-retro.md",
+          "verify": ".claude/PRPs/reports/m2-late-2-verify.md"
+        },
+        "m2-late-b-actor": {
+          "status": "done",
+          "scope": "B-actor portable actor-ID linkage — dual-signed link-claim + actor_app_link table (ADR-016 C3)",
+          "pr": 197,
+          "merged_at": "2026-06-14",
+          "retro": ".claude/PRPs/reports/m2-late-b-actor-retro.md"
         }
       }
     },
     "M3": {
       "name": "Town Halls with Mic-Passing (MatrixRTC / LiveKit / Element Call)",
       "former_name": "V2c / C3",
-      "prd": null,
+      "prd": ".claude/PRPs/prds/m3-town-halls-rtc.prd.md",
       "umbrella_prd": ".claude/PRPs/prds/v2-messaging-rtc.prd.md",
-      "status": "needs_prd",
+      "status": "done",
+      "shipped_at": "2026-06-22",
       "depends_on": [
         "M1",
         "M2"
@@ -156,30 +173,74 @@
         "Recording lands as MP4 with hash-chain entry (query governance_log WHERE entry_kind = 'room_recording_uploaded')",
         "Emergency-mute drops all publishers in <500ms including cross-instance participants (multi-instance test rig; timing at publisher client)"
       ],
-      "oq_gates": {
-        "OQ-V2-04": {
-          "topic": "recording storage",
-          "status": "parked for M3 sub-PRD per umbrella PRD §OQ table",
-          "candidates": "separate MinIO/S3 store, pict-rs extension, or Matrix media repo with hash-chained URL",
-          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md / v2-messaging-rtc.prd.md OQ-V2-04"
-        }
-      },
       "resolved_gates": {
         "OQ-V2-06": "Resolved 2026-04-17 — room-global mute-all (cross-instance emergency-mute scope).",
         "OQ-V2-07": "Resolved 2026-04-17 — instance-local RTC cost model. Document expected cost in M3 delivery plan before rollout.",
-        "OQ-019": "Low-intersection — only relevant if M3 recording-as-artefact emits reputation events; research §3.4.3 C3.6 currently emits none. Non-blocking."
+        "OQ-019": "Low-intersection — only relevant if M3 recording-as-artefact emits reputation events; research §3.4.3 C3.6 currently emits none. Non-blocking.",
+        "OQ-V2-04": "Resolved 2026-06-17 — recording storage = MinIO evidentiary store (replay-grade access), optional behind record_town_halls."
       },
       "threat_model_extensions_due_at_m3": [
         "06 §7 rows for: LiveKit SFU compromise, recording artefact leak via pict-rs path confusion, E2EE key mishandling in bridge (some seeded at M1 Tree C — verify coverage)"
       ],
-      "next_action": "Schedule AFTER M2 ships. Author M3 sub-PRD via /prp-prd from umbrella PRD §V2c. Resolve OQ-V2-04 (recording storage) at PRD-write time. Document LiveKit operational cost before rollout."
+      "evidence_summary": "Six sub-phases shipped 2026-06-17..2026-06-22 (PRs #200 entry-kinds, #201 infra, #202 stage-mode, #204 emergency-mute, #205 recording, #208 e2e harness). Post-merge e2e-fixes cycle all-green 2026-06-22 (5ecef0046). Retros + verify reports on trunk.",
+      "sub_phases": {
+        "m3-core-entry-kinds": {
+          "status": "done",
+          "scope": "3 chair/mute entry-kind consts + shim + ROOM_KINDS 10→13",
+          "pr": 200,
+          "merged_at": "2026-06-17",
+          "retro": ".claude/PRPs/reports/m3-core-entry-kinds-retro.md"
+        },
+        "m3-core-infra": {
+          "status": "done",
+          "scope": "RTC stack deployable + optional — rtc_enabled flag, LiveKit pseudonym-JWT service, bridge wiring",
+          "pr": 201,
+          "merged_at": "2026-06-18",
+          "retro": ".claude/PRPs/reports/m3-core-infra-retro.md",
+          "verify": ".claude/PRPs/reports/m3-core-infra-verify.md"
+        },
+        "m3-core-stage-mode": {
+          "status": "done",
+          "scope": "town-hall stage mode — chair-controlled mic-passing + FIFO raised-hand queue",
+          "pr": 202,
+          "merged_at": "2026-06-19",
+          "retro": ".claude/PRPs/reports/m3-core-stage-mode-retro.md",
+          "verify": ".claude/PRPs/reports/m3-core-stage-mode-verify.md"
+        },
+        "m3-core-emergency-mute": {
+          "status": "done",
+          "scope": "emergency mute-all — cross-instance Matrix power-levels + local LiveKit",
+          "pr": 204,
+          "merged_at": "2026-06-19",
+          "retro": ".claude/PRPs/reports/m3-core-emergency-mute-retro.md",
+          "verify": ".claude/PRPs/reports/m3-core-emergency-mute-verify.md"
+        },
+        "m3-core-recording": {
+          "status": "done",
+          "scope": "optional recording — Egress→S3(MinIO)→content_sha256 hash-chain emission",
+          "pr": 205,
+          "merged_at": "2026-06-20",
+          "retro": ".claude/PRPs/reports/m3-core-recording-retro.md",
+          "verify": ".claude/PRPs/reports/m3-core-recording-verify.md"
+        },
+        "m3-core-e2e-pilot": {
+          "status": "done",
+          "scope": "live docker-compose e2e acceptance suite (stage-mode, recording, room-provisioning, emergency-mute)",
+          "pr": 208,
+          "merged_at": "2026-06-22",
+          "retro": ".claude/PRPs/reports/m3-core-e2e-pilot-e2e-fixes-retro.md",
+          "verify": ".claude/PRPs/reports/m3-core-e2e-pilot-verify.md"
+        }
+      },
+      "next_action": "none — shipped. threat_model_extensions_due_at_m3 rows not audited at the 2026-07-17 roadmap sync; verify 06 §7 coverage at next doc pass."
     }
   },
   "what_remains": {
     "active_m_track": [
-      "M2-core sub-PRD AUTHORED 2026-06-05 (.claude/PRPs/prds/m2-governance-triggered-rooms.prd.md, rooms-first scope) — ready for /prp-plan, no OQ blockers. M2-late (sanction propagation) gated on OQ-ADR016-02 + OQ-ADR016-04.",
-      "M3 sub-PRD authoring (status: needs_prd) — scheduled after M2 ships. Gate: OQ-V2-04.",
-      "NOTE: v1 is fully closed — zero unstarted sub-phases, zero deferred work (deps-r3 resolved by extism 1.30.0 / PR #183). The M-track is the sole active forward work."
+      "M-TRACK COMPLETE 2026-06-22: M1 (2026-06-04) + M2 (2026-06-14) + M3 (2026-06-22, PR #208 e2e harness; e2e-fixes all-green @5ecef0046). The v2-messaging-rtc umbrella PRD is delivered.",
+      "ACTIVE: pilot-internal — internal pilot on a live deployment; go/no-go gate before any external community runs it.",
+      "Post-pilot candidates (none scheduled): PeerTube app plane (first non-Matrix integration — first-blocks OQ-ADR016-01 B-fetch adapter ADR); member-facing rulemaking surface (research stage — docs/research/brehon-rulemaking-uiux-recommendations.md); gov-plugins-r1 (see high_priority_unstarted).",
+      "NOTE: v1 remains fully closed. deps-r4 (extism/wasmtime revert) still reopened — see v1_polish_and_deferred."
     ],
     "v1_polish_and_deferred": [
       {
@@ -262,7 +323,13 @@
     }
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "Run /prp-plan on the M3 sub-PRD (.claude/PRPs/prds/m3-town-halls-rtc.prd.md) — the final V2 messaging cluster (town halls + RTC). M3-core (Phases 1-6) is unblocked: OQ-V2-04 resolved 2026-06-17 (recording = MinIO evidentiary store, replay-grade access, optional behind record_town_halls). Full town-hall RTC: stage mode, dual-sourced chair, FIFO raised-hand queue, mic-passing, federation-wide emergency mute <500ms, anonymous town halls, optional recording-as-artefact. Adds 3 chair/mute entry kinds + first emission of the M2-registered room_recording_uploaded (count 69->72). Pilot-driven: success = a real pilot town hall runs end-to-end. M2 fully shipped (PR #191 core; #196/#197 late).",
+    "next_logical_sub_phase": "None scheduled — the M-track is complete (M1/M2/M3 shipped). Active work is the internal pilot (pilot-internal; go/no-go gate before any external community). Post-pilot candidates: gov-plugins-r1 (ADR-012 governance hook call sites + first Wasm plugin — plan-worthy phase), PeerTube app plane (needs OQ-ADR016-01 B-fetch adapter ADR), member-facing rulemaking surface (needs PRD; research at docs/research/brehon-rulemaking-uiux-recommendations.md).",
+    "state_as_of_2026_07_17": {
+      "milestone_status": "M1 done (2026-06-04). M2 done (2026-06-14 — PRs #184/#191/#192/#196/#197). M3 done (2026-06-22 — PRs #200/#201/#202/#204/#205/#208).",
+      "active": "pilot-internal (internal pilot on live deployment)",
+      "trunk_head": "8aa4b6055 (README roadmap/ecosystem sections + research-docs commit)",
+      "note": "This sync corrects the stale 2026-06-05 snapshot below (kept for history). Statuses derived from git + gh PR evidence + retros on trunk; CODE WINS on any residual drift."
+    },
     "state_as_of_2026_06_05": {
       "milestone_status": "M1 done (PRs #177 m1-b, #179 m1-a). M2 needs_prd. M3 needs_prd (after M2).",
       "v1": "CLOSED — all lanes + meta-lanes shipped; close-out Phases 0-8 done (PR #182 deps-r2 webmention inline merged 2026-06-05 @ 772684e1f). See v1_shipped block.",
