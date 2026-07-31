@@ -16,7 +16,7 @@ Queue a follow-up task via `junior-add-task` when your changes affect another re
 - **API contract changed** — endpoint renamed, request/response schema modified, new required field
 - **DB schema changed** — migration that affects consumers reading the same tables
 - **Shared config changed** — Docker network, env var format, port assignment, volume mount
-- **Infra-drift detected** (post-task-retro Step 5a) — queue a homeserver doc update task
+- **Infra-drift detected** (post-task-retro Step 6a) — queue a homeserver doc update task
 
 ## Before queuing
 
