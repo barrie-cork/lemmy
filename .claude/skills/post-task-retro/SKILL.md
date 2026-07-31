@@ -134,18 +134,32 @@ These lessons are the input for weekly-review's clustering step — at 3+ simila
 
 ### 5. Auto-promote confirmed patterns
 
-Search for similar past issues:
+**Automation switch:** if CLAUDE.md's `## Automation Switches` marks **Lessons-file PR automation `OFF`**, still run the search and still write the `pattern` memory, but SKIP the CLAUDE.md `## Learned Patterns` append and the `learn:` commit — the pattern is preserved in PMD, no CLAUDE.md commit or PR is created. Steps 0 (task-code commit) and 7 (eval memory) are unaffected by the switch.
+
+**5a. Repeat ROOT_CAUSE hard trigger — mandatory whenever Step 3 recorded a ROOT_CAUSE.**
+
+```
+memory_search_hybrid(query="<root cause category> <1-2 topical keywords>", tags="<repo>", memory_type="qa-result", limit=10)
+```
+
+If ANY prior retro (not this one) carries the same `ROOT_CAUSE:` category **and** is topically the same underlying issue (two unrelated retros sharing a category, e.g. `code-error`, don't count) — this is a repeat. Promote NOW; do not defer to a 3rd occurrence. This is a hard trigger, not a judgment call: skipping it because the task is already long is the exact failure mode PMD #389 documented — a lesson recurred across 3 retros and 2 real CI hits before anyone promoted it.
+
+If no prior retro matches, this is the 1st occurrence — continue to 5b.
+
+**5b. Generic bug-memory clustering.**
 
 ```
 memory_search_hybrid(query="<root cause keywords>", tags="<repo>", memory_type="bug", limit=5)
 ```
 
-**If 3+ similar memories exist, this is a confirmed pattern. Auto-promote:**
+If 3+ similar memories exist, this is a confirmed pattern.
+
+**If 5a or 5b triggers, auto-promote:**
 
 1. Read the current `CLAUDE.md`
 2. Find or create a `## Learned Patterns` section at the bottom
 3. Append the pattern as a bullet: `- **<title>** — <1-line actionable description>`
-4. Commit: `learn: <pattern title> (auto-promoted from 3+ confirmations)`
+4. Commit: `learn: <pattern title> (auto-promoted from repeat ROOT_CAUSE | 3+ confirmations)`
 5. Write a `pattern` memory: `memory_write(title="Pattern: <title>", memory_type="pattern", ...)`
 
 **Guardrails:**
@@ -170,7 +184,7 @@ Write an `issue-note` memory:
 memory_write(
   title: "Infra drift: <what changed>",
   memory_type: "issue-note",
-  tags: "infrastructure,tanglewood-hive",
+  tags: "homeserver,infra-drift,infrastructure",   # infra-drift is REQUIRED — scripts/memory-audit.sh greps for it
   importance: 4,
   content: "Repo: <this repo>\nChange: <what>\nAffected docs: <paths>\nSuggested update: <brief>"
 )

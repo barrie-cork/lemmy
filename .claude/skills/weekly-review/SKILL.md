@@ -296,7 +296,7 @@ Surface to user if any mount ≥90% — do not auto-remediate at that level.
 memory_write(
   title: "Weekly review <YYYY>-W<NN>",
   memory_type: "summary",
-  tags: "tanglewood-hive",
+  tags: "<repo-name>",          # the repo this review ran in, not the control plane
   importance: 3,
   content: |
     Tasks: <count> | Success: <pct>% | Avg score: <num>
