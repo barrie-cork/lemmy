@@ -184,7 +184,7 @@ Write an `issue-note` memory:
 memory_write(
   title: "Infra drift: <what changed>",
   memory_type: "issue-note",
-  tags: "infrastructure,homeserver",
+  tags: "homeserver,infra-drift,infrastructure",   # infra-drift is REQUIRED — scripts/memory-audit.sh greps for it
   importance: 4,
   content: "Repo: <this repo>\nChange: <what>\nAffected docs: <paths>\nSuggested update: <brief>"
 )
