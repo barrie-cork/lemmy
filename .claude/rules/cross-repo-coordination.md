@@ -22,7 +22,7 @@ Queue a follow-up task via `junior-add-task` when your changes affect another re
 
 1. **Check daemon status**: call `junior-all-status` to confirm the target repo's daemon is active
 2. **Never queue on paused repos** (dog-shelter, my-food-system) without explicit human instruction
-3. **homeserver as target**: homeserver's Junior daemon is manual-start on the Mac. Check status first. If it is not running, fall back to writing an `issue-note` memory tagged `infra-drift,homeserver` (the existing passive mechanism)
+3. **homeserver as target**: homeserver's Junior daemon is manual-start on the Mac. Check status first. If it is not running, fall back to writing an `issue-note` memory tagged `homeserver,infra-drift` (the existing passive mechanism — same tags Step 6a writes, so both land in `scripts/memory-audit.sh`'s sweep)
 
 ## Safeguards
 
