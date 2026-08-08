@@ -50,9 +50,22 @@ The workflow below is ordered so all the *preparation* (commit, stale checks, sc
 
 ### 0. Commit and push
 
+**Run `git status --porcelain` first and read it before staging anything.** Any entry this task did not create — especially a non-blank *first* column (staged) — means another session is working in this tree. `git add -A` or a bare `git commit` would sweep their in-flight work into your commit.
+
+**Solo (nothing in the tree but your work):**
+
 1. Stage and commit all changes
 2. Push: `git push origin HEAD`
-3. Verify: `git status` shows clean tree
+3. Verify: `git status` shows a clean tree
+
+**Concurrent (someone else's work is in the tree) — commit your paths only:**
+
+1. `git commit -m "<msg>" -- <your paths>` — a **pathspec commit**. It records the working-tree content of exactly those paths, ignores whatever is staged in the index, and updates the index for your paths only. Their staged renames and edits survive untouched, and your paths come out clean. For a path that is still untracked, `git add <that path>` first (it stages only that path) — a pathspec commit cannot name a file git does not know.
+2. Push, then re-run `git status --porcelain` and confirm **their** entries are exactly as you found them. The check here is *unchanged for them*, not "clean tree" — the tree is supposed to still be dirty.
+
+**If a file you must commit is also being edited by the other session, stop and coordinate.** Every mechanism records the working-tree blob, so their half-finished edit rides along in your commit no matter which you pick. `CLAUDE.md` is the usual flashpoint — both sessions promote patterns into it (step 5).
+
+> **Do not use `GIT_INDEX_FILE` for this.** It commits exactly what a pathspec commit would, and it leaves a trap: the main index still holds the **pre-commit** blobs for your paths, so `git status` shows them `MM` — a staged revert of your own work — and the other session's next plain `git commit` silently undoes it. If you have already committed that way, repair with `git reset HEAD -- <your paths>` before continuing.
 
 If nothing to commit (failure with no code changes), skip to step 1.
 
