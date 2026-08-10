@@ -24,6 +24,13 @@
 # The Windows host cannot build the extism/wasmtime chain natively.
 set -euo pipefail
 
+# rustup installs cargo to ~/.cargo/bin and puts it on PATH via ~/.cargo/env,
+# which a non-interactive `ssh host 'cmd'` shell does NOT source. Source it so
+# `cargo update` (line ~50) resolves. Harmless if cargo is already on PATH.
+# shellcheck disable=SC1090,SC1091
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+command -v cargo >/dev/null 2>&1 || { echo "cargo not found even after sourcing ~/.cargo/env"; exit 127; }
+
 REPO="${1:-.}"
 TRUNK="governance-v0"
 WORK_BRANCH="chore/revert-extism-1.30"
