@@ -115,6 +115,14 @@ fi
 # from the daemon-local sqlite. Query the HTTP server preferentially using the MCP
 # session protocol (two-step: POST initialize -> POST tools/call).
 # See feedback_pmd_retro_check_http_store_split.md for the topology incident.
+#
+# Token comes from .env's PMD_HTTP_TOKEN, NOT from .mcp.json's Authorization
+# header literal. .mcp.json holds "${PMD_BREHON_TOKEN}" -- a placeholder Claude
+# Code's own MCP loader expands in-process at connect time. A hook reading the
+# file as plain JSON text (jq) gets the unexpanded literal string, sends
+# "Bearer ${PMD_BREHON_TOKEN}" to the server, and silently fails auth -- _SID
+# stays empty, HTTP_RECENT falls through to sqlite, and a real HTTP-only retro
+# reads as "not found". Read the resolved value straight from .env instead.
 PMD_HTTP_URL=""
 PMD_HTTP_TOKEN=""
 if command -v jq &>/dev/null; then
@@ -126,8 +134,14 @@ if command -v jq &>/dev/null; then
     _MCP_TYPE=$(jq -r '.mcpServers["project-memory"].type // ""' "$_MCP_JSON" 2>/dev/null || true)
     if [ "$_MCP_TYPE" = "http" ]; then
       PMD_HTTP_URL=$(jq -r '.mcpServers["project-memory"].url // ""' "$_MCP_JSON" 2>/dev/null || true)
-      PMD_HTTP_TOKEN=$(jq -r '(.mcpServers["project-memory"].headers.Authorization // "") | ltrimstr("Bearer ")' "$_MCP_JSON" 2>/dev/null || true)
     fi
+  fi
+fi
+if [ -n "$PMD_HTTP_URL" ]; then
+  _ENV_FILE="${MAIN_REPO:-.}/.env"
+  [ -f "$_ENV_FILE" ] || _ENV_FILE=".env"
+  if [ -f "$_ENV_FILE" ]; then
+    PMD_HTTP_TOKEN=$(grep -E '^PMD_HTTP_TOKEN=' "$_ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
   fi
 fi
 
