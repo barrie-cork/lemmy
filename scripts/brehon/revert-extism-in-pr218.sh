@@ -73,7 +73,9 @@ Watch: watch_extism_wasmtime_42_adopt -- re-adopt only when an extism release
 pairs wasmtime >=42 AND keeps/adapts the std::error::Error impl."
 
 echo "==> 7. Linux compile proof on the deploy target (extism/wasmtime chain)"
-./scripts/brehon/cargo-linux.sh check --workspace --features full > /tmp/revert-extism-check.log 2>&1
+# Invoke via `bash` not `./` -- cargo-linux.sh is tracked -rw-r--r-- (no +x bit),
+# so `./script` gives Permission denied (exit 126). `bash script` ignores the bit.
+bash scripts/brehon/cargo-linux.sh check --workspace --features full > /tmp/revert-extism-check.log 2>&1
 status=$?
 tail -30 /tmp/revert-extism-check.log
 echo "cargo-linux check exit: $status"
