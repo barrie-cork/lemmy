@@ -314,9 +314,12 @@ memory_write(
 
 Use `—` for columns with no data.
 
-### 6. Commit
+### 6. Commit and push
 
 - Commit message MUST start with `Review:` — prevents cron cascade
+- **Push it: `git push origin HEAD`.** A review that only commits is invisible: on a daemon-run repo the METRICS.md rows pile up on the server, never reach GitHub, and the next run inherits a diverged checkout. Step 6 said "Commit" alone across the whole fleet, which is how five checkouts drifted up to 5 commits ahead of origin.
+- If the push is rejected because the branch moved, `git pull --rebase` then push. Never force.
+- **If you find the checkout already ahead of origin, push it — that is the fix, not an observation.** A prior run recorded "origin/main behind local main again — W31 merge unpushed" in its own commit message and pushed nothing; the note cost more than the push would have.
 - Output a brief summary of what was done
 
 ## Notes
