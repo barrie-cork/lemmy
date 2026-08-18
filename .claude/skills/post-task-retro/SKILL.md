@@ -155,6 +155,8 @@ These lessons are the input for weekly-review's clustering step — at 3+ simila
 memory_search_hybrid(query="<root cause category> <1-2 topical keywords>", tags="<repo>", memory_type="qa-result", limit=10)
 ```
 
+**A zero-result search is not evidence of a first occurrence — retry shorter before concluding that.** This search is seeded by your own wording, and hybrid retrieval degrades sharply as the query lengthens: a full sentence describing the cause returned nothing here against a corpus that visibly contained the match, while four keywords found it on the next try. Keep the query to 3-5 content words. If it comes back empty, drop to the two most distinctive nouns and search again — only then treat this as occurrence 1. Concluding "no prior occurrence" from one verbose query is how a repeat slips through a trigger that is working correctly.
+
 If ANY prior retro (not this one) carries the same `ROOT_CAUSE:` category **and** is topically the same underlying issue (two unrelated retros sharing a category, e.g. `code-error`, don't count) — this is a repeat. Promote NOW; do not defer to a 3rd occurrence. This is a hard trigger, not a judgment call: skipping it because the task is already long is the exact failure mode PMD #389 documented — a lesson recurred across 3 retros and 2 real CI hits before anyone promoted it.
 
 If no prior retro matches, this is the 1st occurrence — continue to 5b.
