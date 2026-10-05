@@ -172,7 +172,7 @@ lemmy_db_views_vote = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_
 activitypub_federation = { version = "0.7.0-beta.11", default-features = false, features = [
   "actix-web",
 ] }
-diesel = { version = "=2.3.11", features = [
+diesel = { version = "=2.3.13", features = [
   "64-column-tables",
   "chrono",
   "postgres",
@@ -207,7 +207,7 @@ reqwest = { version = "0.13.4", default-features = false, features = [
 reqwest-middleware = { version = "0.5.2", features = ["form", "json"] }
 reqwest-tracing = "0.7.1"
 clokwerk = "0.4.0"
-doku = { version = "0.21.1", features = ["url-2"] }
+doku = { version = "0.22.0", features = ["url-2"] }
 bcrypt = "0.19.1"
 chrono = { version = "0.4.45", features = [
   "now",
